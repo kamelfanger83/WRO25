@@ -1,0 +1,1 @@
+WRO25 consists of building a robot in the category "future engineers".
