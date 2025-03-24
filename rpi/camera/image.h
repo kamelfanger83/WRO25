@@ -1,10 +1,10 @@
 #include <cstdint>
 
+#define WIDTH 800
+#define HEIGHT 600
 
-struct Image
-{
-    uint8_t* Y;
-    uint8_t* U;
-    uint8_t* V;
 
+struct Image {
+    uint8_t* XRGB;
+    long long timestamp;
 };
