@@ -3,7 +3,7 @@
 #include <cmath>
 #include <cstdint>
 
-#include "image.h"
+#include "camera.h"
 #include "imagemask.h"
 
 
@@ -16,7 +16,7 @@ struct Segment
 
 
 
-std::vector<Point> mask(const Image& img, bool (*is_color)(uint8_t, uint8_t, uint8_t) ){
+std::vector<Point> mask(const Frame& img, bool (*is_color)(uint8_t, uint8_t, uint8_t) ){
     // color array: [random, R, G, B]
     std::vector<Point> points;
     for (int x = 0; x < WIDTH; ++x) {
@@ -32,6 +32,21 @@ std::vector<Point> mask(const Image& img, bool (*is_color)(uint8_t, uint8_t, uin
     }
     return points;
 }
+
+Frame colorColor(const Frame& img, std::vector<Point> points){
+    Frame colored_img = img;
+    int r = 255;
+    int g = 0;
+    int b = 0;
+    for (Point p : points){
+        int i = p.y * WIDTH + p.x;
+        colored_img.XRGB[i * 4 + 1] = 255;
+        colored_img.XRGB[i * 4 + 2] = 0;
+        colored_img.XRGB[i * 4 + 3] = 0;
+    }
+    return colored_img;
+}
+
 
 
 
@@ -86,7 +101,7 @@ bool is_red(uint8_t R, uint8_t G, uint8_t B){
 
 int main(){
 
-    Image image;
+    Frame image;
 
 
     std::cout << "Hello World";
