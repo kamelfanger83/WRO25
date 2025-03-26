@@ -3,7 +3,7 @@
 #include <thread>
 
 #include "camera.h"
-#include "show_image.cpp"
+#include "save_image.cpp"
 
 int main() {
   initializeCamera();

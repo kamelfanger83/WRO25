@@ -4,7 +4,12 @@
 #include <cstdint>
 
 #include "camera.h"
-#include "imagemask.h"
+
+
+struct Point{
+    int x;
+    int y;
+};
 
 
 struct Segment
@@ -15,7 +20,7 @@ struct Segment
 };
 
 
-
+/// Goes over a frame and returns a vector containing all the points in the Frame of a certain color.
 std::vector<Point> mask(const Frame& img, bool (*is_color)(uint8_t, uint8_t, uint8_t) ){
     // color array: [random, R, G, B]
     std::vector<Point> points;
@@ -33,7 +38,10 @@ std::vector<Point> mask(const Frame& img, bool (*is_color)(uint8_t, uint8_t, uin
     return points;
 }
 
-Frame colorColor(const Frame& img, std::vector<Point> points){
+
+/// Test function for color recognition, colors in the Pixels that are recognized to be of a 
+/// certain color in bright pink and saves the frame as a png.
+void colorColor(const Frame& img, std::vector<Point> points){
     Frame colored_img = img;
     int r = 255;
     int g = 0;
@@ -41,15 +49,15 @@ Frame colorColor(const Frame& img, std::vector<Point> points){
     for (Point p : points){
         int i = p.y * WIDTH + p.x;
         colored_img.XRGB[i * 4 + 1] = 255;
-        colored_img.XRGB[i * 4 + 2] = 0;
-        colored_img.XRGB[i * 4 + 3] = 0;
+        colored_img.XRGB[i * 4 + 2] = 19;
+        colored_img.XRGB[i * 4 + 3] = 240;
     }
-    return colored_img;
+    saveFrame(colored_img);
 }
 
 
 
-
+/// Whole block of color recognition functions. 
 bool is_blue(uint8_t R, uint8_t G, uint8_t B){
     if (B > 150 && B /2 >= R && B /2 >= G){
         return true;
@@ -99,11 +107,3 @@ bool is_red(uint8_t R, uint8_t G, uint8_t B){
 
 
 
-int main(){
-
-    Frame image;
-
-
-    std::cout << "Hello World";
-    return 0;
-}
