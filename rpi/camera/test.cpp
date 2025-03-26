@@ -3,6 +3,7 @@
 #include <thread>
 
 #include "camera.h"
+#include "show_image.cpp"
 
 int main() {
   initializeCamera();
@@ -10,7 +11,10 @@ int main() {
   while (lastFrame.timestamp == -1) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
+
   std::cerr << "We captured an image at: " << lastFrame.timestamp << std::endl;
+
+  saveFrame(lastFrame);
 
   cleanCamera();
 }

@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 
 #define WIDTH 800
