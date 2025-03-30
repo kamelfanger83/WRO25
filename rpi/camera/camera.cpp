@@ -1,3 +1,16 @@
+#include "camera.h"
+
+#ifdef NO_LIBCAMERA
+
+Frame lastFrame{nullptr, -1};
+
+void initializeCamera() {}
+
+void queueCapture() {}
+
+void cleanCamera() {}
+
+#else
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
  * Copyright (C) 2020, Ideas on Board Oy.
@@ -11,8 +24,6 @@
 #include <sys/mman.h>
 
 #include <libcamera/libcamera.h>
-
-#include "camera.h"
 
 using namespace libcamera;
 static std::shared_ptr<Camera> camera;
@@ -141,3 +152,4 @@ void cleanCamera() {
 
   return;
 }
+#endif
