@@ -6,7 +6,7 @@ project(libcamera_project
 )
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -Wno-unused-parameter")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -Wno-unused-parameter -Wno-missing-field-initializers")
 
 # Find pkg-config and libcamera
 find_package(PkgConfig REQUIRED)

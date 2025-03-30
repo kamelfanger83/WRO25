@@ -12,9 +12,9 @@
 void convertXRGBtoRGB(const uint8_t *src, uint8_t *dst, int width, int height) {
   int pixel_count = width * height;
   for (int i = 0; i < pixel_count; i++) {
-    dst[i * 3 + 0] = src[i * 4 + 1]; // Red
-    dst[i * 3 + 1] = src[i * 4 + 2]; // Green
-    dst[i * 3 + 2] = src[i * 4 + 3]; // Blue
+    dst[i * 3 + 0] = src[i * 4 + 2]; // Red
+    dst[i * 3 + 1] = src[i * 4 + 1]; // Green
+    dst[i * 3 + 2] = src[i * 4 + 0]; // Blue
   }
 }
 

@@ -122,8 +122,8 @@ void initializeCamera() {
   /*
    * Controls can be added to a request on a per frame basis.
    */
-  ControlList &controls = request->controls();
-  controls.set(controls::Brightness, 0.5);
+  // ControlList &controls = request->controls();
+  // controls.set(controls::Brightness, 0.5);
 
   camera->requestCompleted.connect(requestComplete);
 

@@ -3,7 +3,7 @@
 #include <thread>
 
 #include "camera.h"
-#include "save_image.cpp"
+#include "find_color.cpp"
 
 int main() {
   initializeCamera();
@@ -14,7 +14,9 @@ int main() {
 
   std::cerr << "We captured an image at: " << lastFrame.timestamp << std::endl;
 
-  saveFrame(lastFrame);
+  colorColor(lastFrame, mask(lastFrame, isRed));
+
+  // saveFrame(lastFrame);
 
   cleanCamera();
 }
