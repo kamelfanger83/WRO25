@@ -5,6 +5,7 @@
 #include <cstring>
 
 #include "serial.cpp"
+#include "structs.h"
 
 int main() {
     if (initializeSerial()) return 1;
@@ -20,9 +21,8 @@ int main() {
 
     std::cout << "Control with WASD and E for going straight. Press 'q' to quit.\n";
 
-    int ang = 90;
-    // between 0 and 240
-    int speed = 0;
+    Commands commands{90, 0};
+
 
     bool run = true;
     while (run) {
@@ -31,14 +31,14 @@ int main() {
         int key = getchar();
         switch (key) {
             case 'q': run = false; break;
-            case 'w': speed = std::min(255, speed + 40); break;
-            case 's': speed = std::max(-255, speed - 40); break;
-            case 'a': ang = std::min(170, ang + 15); break;
-            case 'd': ang = std::max(0, ang - 15); break;
-            case 'e': ang = 90; break;
+            case 'w': commands.speed = std::min(255, commands.speed + 40); break;
+            case 's': commands.speed = std::max(-255, commands.speed - 40); break;
+            case 'a': commands.angle = std::min(170, commands.angle + 15); break;
+            case 'd': commands.angle = std::max(0, commands.angle - 15); break;
+            case 'e': commands.angle = 90; break;
         }
 
-        sendCommands(ang, speed);
+        sendCommands(commands);
 
         readArduinoResponse();
     }

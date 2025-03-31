@@ -6,6 +6,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "structs.h"
+
 const std::string port = "/dev/ttyUSB0";
 const int baud = B115200;
 
@@ -84,18 +86,18 @@ int readArduinoResponse() {
 ///     - 0 <= angle <= 170
 ///     - -255 <= speed <= 255
 /// Returns 0 if successful, returns nonzero number otherwise.
-int sendCommands(int angle, int speed) {
-    if (angle < 0 || angle > 170) {
+int sendCommands(Commands commands) {
+    if (commands.angle < 0 || commands.angle > 170) {
         std::cerr << "Invalid angle" << std::endl;
         return 1;
     }
-    if (speed < -255 || speed > 255) {
+    if (commands.speed < -255 || commands.speed > 255) {
         std::cerr << "Invalid speed" << std::endl;
         return 2;
     }
     // Prepare message: odd numbers for servo commands, even for motor commands
-    std::string message = std::to_string(angle * 2 + 1) + "\n" +
-                          std::to_string(speed * 2) + "\n";
+    std::string message = std::to_string(commands.angle * 2 + 1) + "\n" +
+                          std::to_string(commands.speed * 2) + "\n";
     write(serial_port, message.c_str(), message.length());
     return 0;
 }
