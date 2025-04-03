@@ -4,6 +4,7 @@
 
 #include "camera.h"
 #include "find_color.cpp"
+#include "find_line.cpp"
 
 int main() {
   initializeCamera();
@@ -14,9 +15,13 @@ int main() {
 
   std::cerr << "We captured an image at: " << lastFrame.timestamp << std::endl;
 
-  colorColor(lastFrame, mask(lastFrame, isOrange));
+  // colorColor(lastFrame, mask(lastFrame, isOrange));
 
   // saveFrame(lastFrame);
+
+  auto amask = mask(lastFrame, isOrange);
+  colorColor(lastFrame, amask);
+  colorLineInFrame(lastFrame, findLine(amask));
 
   cleanCamera();
 }

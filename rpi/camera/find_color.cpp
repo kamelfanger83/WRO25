@@ -1,3 +1,5 @@
+#pragma once
+
 #include "camera.h"
 #include <cassert>
 #include <cmath>
