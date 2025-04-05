@@ -14,7 +14,7 @@ int main() {
 
   std::cerr << "We captured an image at: " << lastFrame.timestamp << std::endl;
 
-  colorColor(lastFrame, mask(lastFrame, isRed));
+  colorColor(lastFrame, mask(lastFrame, isOrange));
 
   // saveFrame(lastFrame);
 

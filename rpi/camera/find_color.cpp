@@ -1,16 +1,9 @@
 #include "camera.h"
 #include <cassert>
 #include <cmath>
-#include <cstdint>
 #include <vector>
 
 #include "save_image.cpp"
-
-// The main justification for this struct is that otherwise there is no nice
-// option to return RGB values from a function
-struct Pixel {
-  uint8_t &r, &g, &b;
-};
 
 struct Point {
   int x;
@@ -22,27 +15,13 @@ struct Segment {
   Point end;
 };
 
-/// Gets a mutable reference to the pixel at (x, y).
-Pixel getPixel(Frame &frame, int x, int y) {
-  int i = (y * WIDTH + x) * 4;
-  return Pixel{frame.XRGB[i + 2], frame.XRGB[i + 1], frame.XRGB[i]};
-}
-
-/// Gets a const reference to the pixel at (x, y).
-const Pixel getPixel(const Frame &frame, int x, int y) {
-  int i = (y * WIDTH + x) * 4;
-  return Pixel{const_cast<uint8_t &>(frame.XRGB[i + 2]),
-               const_cast<uint8_t &>(frame.XRGB[i + 1]),
-               const_cast<uint8_t &>(frame.XRGB[i])};
-}
-
 /// Goes over a frame and returns a vector containing all the points in the
 /// Frame of a certain color.
-std::vector<Point> mask(const Frame &frame, bool (*is_color)(Pixel)) {
+std::vector<Point> mask(const Frame &frame, bool (*is_color)(const HSVPixel)) {
   std::vector<Point> points;
   for (int x = 0; x < WIDTH; ++x) {
     for (int y = 0; y < HEIGHT; ++y) {
-      if (is_color(getPixel(frame, x, y))) {
+      if (is_color(frame.HSV[y * WIDTH + x])) {
         points.push_back({x, y});
       }
     }
@@ -56,18 +35,12 @@ std::vector<Point> mask(const Frame &frame, bool (*is_color)(Pixel)) {
 /// CAUTION: This function modifies the frame that is passed.
 void colorColor(Frame &frame, std::vector<Point> points) {
   for (Point p : points) {
-    Pixel pixel = getPixel(frame, p.x, p.y);
-    pixel.r = 0;
-    pixel.g = 255;
-    pixel.b = 0;
+    HSVPixel &pixel = frame.HSV[p.y * WIDTH + p.x];
+    pixel.h = 0;
+    pixel.s = 255;
+    pixel.v = 255;
   }
   saveFrame(frame);
-}
-
-/// Converts RGB to greyscale value
-double convertRGB(uint8_t R, uint8_t G, uint8_t B) {
-  int grayscaleValue = 0.3 * R + 0.59 * G + 0.11 * B;
-  return grayscaleValue;
 }
 
 /// Gradient function. Takes a frame and a point and returns the direction of
@@ -89,9 +62,10 @@ double directionOfGradientAtPoint(Point x0, const Frame &frame) {
   // Apply Sobel filter
   for (int i = -1; i <= 1; ++i) {
     for (int j = -1; j <= 1; ++j) {
-      Pixel pixel = getPixel(frame, x + j, y + i);
+      HSVPixel pixel = frame.HSV[(y + i) * WIDTH + HEIGHT];
 
-      double greyscale = convertRGB(pixel.r, pixel.g, pixel.b);
+      // This is only an approximation but it should be fine
+      double greyscale = (double)pixel.v / 255.;
 
       // Convolve with Sobel kernels
       gx += greyscale * Gx[i + 1][j + 1];
@@ -102,49 +76,37 @@ double directionOfGradientAtPoint(Point x0, const Frame &frame) {
   return std::atan2(gy, gx);
 }
 
-/// Whole block of color recognition functions.
-bool isBlue(const Pixel pixel) {
-  if (pixel.b > 150 && pixel.b / 2 >= pixel.r && pixel.b / 2 >= pixel.g) {
-    return true;
-  }
-  return false;
+// Whole block of color recognition functions.
+
+/// Returns whether a pixel is considered to have a specific color rather than
+/// some mix or some shade of grey.
+bool isColor(const HSVPixel pixel) {
+  return pixel.s > int(0.55 * 255) && pixel.v > int(0.35 * 255);
 }
 
-bool isOrange(const Pixel pixel) {
-
-  if (pixel.g / 2 >= pixel.b && pixel.r >= pixel.g + 20 && pixel.r >= 200) {
-    return true;
-  }
-  return false;
+bool isBlue(const HSVPixel pixel) {
+  return int(210 / 360. * 255) <= pixel.h && pixel.h <= int(260 / 360. * 255) &&
+         isColor(pixel);
 }
 
-bool isBlack(const Pixel pixel) {
-
-  if (pixel.r + pixel.g + pixel.b <= 150) {
-    return true;
-  }
-  return false;
-}
-bool isWhite(const Pixel pixel) {
-
-  if (pixel.r + pixel.g + pixel.b >= 600) {
-    return true;
-  }
-  return false;
+bool isOrange(const HSVPixel pixel) {
+  return int(18 / 360. * 255) <= pixel.h && pixel.h <= int(35 / 360. * 255) &&
+         isColor(pixel);
 }
 
-bool isGreen(const Pixel pixel) {
+bool isBlack(const HSVPixel pixel) { return pixel.v < int(0.2 * 255); }
 
-  if (pixel.g > 150 && pixel.g / 2 >= pixel.r && pixel.g / 2 >= pixel.b) {
-    return true;
-  }
-  return false;
+bool isWhite(const HSVPixel pixel) {
+  return pixel.s < int(0.15 * 255) && pixel.v > int(0.75 * 255);
 }
 
-bool isRed(const Pixel pixel) {
+bool isGreen(const HSVPixel pixel) {
+  return int(95 / 360. * 255) <= pixel.h && pixel.h <= int(130 / 360. * 255) &&
+         isColor(pixel);
+}
 
-  if (pixel.r > 150 && pixel.r / 2 >= pixel.g && pixel.r / 2 >= pixel.b) {
-    return true;
-  }
-  return false;
+bool isRed(const HSVPixel pixel) {
+  return (int(350 / 360. * 255) <= pixel.h ||
+          pixel.h <= int(10 / 360. * 255)) &&
+         isColor(pixel);
 }

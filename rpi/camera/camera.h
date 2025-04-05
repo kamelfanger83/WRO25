@@ -5,8 +5,12 @@
 #define WIDTH 800
 #define HEIGHT 600
 
+struct HSVPixel {
+  uint8_t h, s, v;
+};
+
 struct Frame {
-  uint8_t *XRGB;
+  HSVPixel *HSV;
   long long timestamp;
 };
 

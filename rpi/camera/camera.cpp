@@ -1,4 +1,31 @@
+#include <algorithm>
+#include <cstdint>
+
 #include "camera.h"
+
+HSVPixel rgbToHsv(uint8_t r, uint8_t g, uint8_t b) {
+  uint8_t maxVal = std::max({r, g, b});
+  uint8_t minVal = std::min({r, g, b});
+  uint8_t delta = maxVal - minVal;
+
+  uint8_t h = 0;
+  if (delta != 0) {
+    if (maxVal == r) {
+      h = 43 * (g - b) / delta;
+    } else if (maxVal == g) {
+      h = 85 + 43 * (b - r) / delta;
+    } else {
+      h = 171 + 43 * (r - g) / delta;
+    }
+  }
+
+  uint8_t s = maxVal == 0 ? 0 : (255 * delta) / maxVal;
+  uint8_t v = maxVal;
+
+  return HSVPixel{h, s, v};
+}
+
+Frame lastFrame{new HSVPixel[WIDTH * HEIGHT * 3], -1};
 
 #ifdef NO_LIBCAMERA
 
@@ -6,40 +33,36 @@
 #include <filesystem>
 #include <iostream>
 #include <string>
+
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-
-Frame lastFrame{nullptr, -1};
 
 int frameIndex = 0;
 
 void initializeCamera() { queueCapture(); }
 
 void queueCapture() {
-  if (lastFrame.XRGB) {
-    stbi_image_free(lastFrame.XRGB);
-  }
   std::string source_path =
       std::filesystem::canonical(__FILE__).parent_path().string();
   int x, y, channels;
   unsigned char *data = stbi_load(
       (source_path + "/frames/" + std::to_string(frameIndex) + ".png").c_str(),
-      &x, &y, &channels, 4);
+      &x, &y, &channels, 0);
   if (x != WIDTH || y != HEIGHT) {
     std::cerr << "Expected an image with dimensions " << WIDTH << "x" << HEIGHT
               << ". Got " << x << "x" << y << "instead.";
     assert(false);
   }
-  // Permute channels to what code expects
   for (int i = 0; i < WIDTH * HEIGHT; ++i) {
-    std::swap(data[i * 4], data[i * 4 + 2]);
+    lastFrame.HSV[i] = rgbToHsv(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
   }
+  stbi_image_free(data);
+  lastFrame.timestamp = frameIndex;
   std::cout << "Read frame #" << frameIndex << std::endl;
-  lastFrame.XRGB = data;
-  lastFrame.timestamp = frameIndex++;
+  ++frameIndex;
 }
 
-void cleanCamera() { stbi_image_free(lastFrame.XRGB); }
+void cleanCamera() { delete[] lastFrame.HSV; }
 
 #else
 /* SPDX-License-Identifier: GPL-2.0-or-later */
@@ -64,8 +87,6 @@ std::unique_ptr<Request> request;
 FrameBufferAllocator *allocator;
 std::unique_ptr<CameraManager> cm;
 
-Frame lastFrame{nullptr, -1};
-
 static void requestComplete(Request *request) {
   std::cout << std::endl
             << "Request completed: " << request->toString() << std::endl;
@@ -85,9 +106,14 @@ static void requestComplete(Request *request) {
   size_t offset = plane.offset;
 
   // Memory map the buffer
-  lastFrame.XRGB =
+  uint8_t *XRGB =
       static_cast<uint8_t *>(mmap(nullptr, length, PROT_READ | PROT_WRITE,
                                   MAP_SHARED, plane.fd.get(), offset));
+
+  for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+    lastFrame.HSV[i] = rgbToHsv(XRGB[i * 4 + 2], XRGB[i * 4 + 1], XRGB[i * 4]);
+  }
+
   // I can't be bothered to do this properly
   lastFrame.timestamp = std::stoll(request->metadata().get(45).toString());
 }
@@ -180,6 +206,8 @@ void cleanCamera() {
   camera->release();
   camera.reset();
   cm->stop();
+
+  delete[] lastFrame.HSV;
 
   return;
 }

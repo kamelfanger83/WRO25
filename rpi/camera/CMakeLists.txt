@@ -8,12 +8,13 @@ project(libcamera_project
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Werror -Wno-unused-parameter -Wno-missing-field-initializers")
 
-# Check platform
+# Only enable libcamera if running on Raspberry Pi
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    if(DEFINED ENV{WSL_DISTRO_NAME})
-        set(WITH_LIBCAMERA OFF)
-    else()
+    file(READ "/proc/cpuinfo" CPUINFO)
+    if(CPUINFO MATCHES "Raspberry Pi")
         set(WITH_LIBCAMERA ON)
+    else()
+        set(WITH_LIBCAMERA OFF)
     endif()
 else()
     set(WITH_LIBCAMERA OFF)
@@ -31,6 +32,8 @@ if(WITH_LIBCAMERA)
 
     # Include paths
     include_directories(${LIBCAMERA_INCLUDE_DIRS})
+else()
+    message(STATUS "Not running on Raspberry Pi, libcamera will not be used.")
 endif()
 
 # Add the executable
