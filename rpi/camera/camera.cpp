@@ -2,13 +2,44 @@
 
 #ifdef NO_LIBCAMERA
 
+#include <cassert>
+#include <filesystem>
+#include <iostream>
+#include <string>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 Frame lastFrame{nullptr, -1};
 
-void initializeCamera() {}
+int frameIndex = 0;
 
-void queueCapture() {}
+void initializeCamera() { queueCapture(); }
 
-void cleanCamera() {}
+void queueCapture() {
+  if (lastFrame.XRGB) {
+    stbi_image_free(lastFrame.XRGB);
+  }
+  std::string source_path =
+      std::filesystem::canonical(__FILE__).parent_path().string();
+  int x, y, channels;
+  unsigned char *data = stbi_load(
+      (source_path + "/frames/" + std::to_string(frameIndex) + ".png").c_str(),
+      &x, &y, &channels, 4);
+  if (x != WIDTH || y != HEIGHT) {
+    std::cerr << "Expected an image with dimensions " << WIDTH << "x" << HEIGHT
+              << ". Got " << x << "x" << y << "instead.";
+    assert(false);
+  }
+  // Permute channels to what code expects
+  for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+    std::swap(data[i * 4], data[i * 4 + 2]);
+  }
+  std::cout << "Read frame #" << frameIndex << std::endl;
+  lastFrame.XRGB = data;
+  lastFrame.timestamp = frameIndex++;
+}
+
+void cleanCamera() { stbi_image_free(lastFrame.XRGB); }
 
 #else
 /* SPDX-License-Identifier: GPL-2.0-or-later */
