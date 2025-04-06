@@ -1,6 +1,6 @@
 #include <utility>
 
-#include "structs.h"
+#include "../structs.h"
 
 enum Line {
     //outer walls
@@ -21,7 +21,7 @@ Line orangeLines[4] = {Line::ORANGE_1, Line::ORANGE_2, Line::ORANGE_3, Line::ORA
 Line blueLines[4] = {Line::BLUE_1, Line::BLUE_2, Line::BLUE_3, Line::BLUE_4};
 
 /// function that takes a line and returns the start and end Cordinates of said line
-std::pair<Coordinate, Coordinate> getStartEndPoints(Line line) {
+std::pair<Vector, Vector> getStartEndPoints(Line line) {
     switch (line) {
         //Coordinates outer walls
         case Line::BORDER_OUT_1: return {{0, 0, 0}, {0, 300, 0}};
