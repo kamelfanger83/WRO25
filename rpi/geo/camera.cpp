@@ -1,6 +1,7 @@
 #include <cmath>
 #include <iomanip>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -42,11 +43,28 @@ CoordinateSystem getCameraSystem(const Pose &pose) {
 Vector unprojectPoint(const CoordinateSystem &cameraSystem,
                       const ScreenPosition &point) {
   double horizontalRange = 2. * std::tan(HORIZONTAL_FOV / 2);
-  double cameraX = (point.x - double(WIDTH) / 2) / WIDTH * horizontalRange;
   double verticalRange = horizontalRange / WIDTH * HEIGHT;
-  double cameraY = (point.y - double(HEIGHT) / 2) / HEIGHT * verticalRange;
+  double cameraX = (point.x - double(WIDTH) / 2.) / WIDTH * horizontalRange;
+  double cameraY = (point.y - double(HEIGHT) / 2.) / HEIGHT * verticalRange;
   return cameraSystem.origin + cameraSystem.z + cameraSystem.x * cameraX +
          cameraSystem.y * cameraY;
+}
+
+/// Projects a given 3D point onto the camera Screen and returns location on the
+/// screen. Returns None if the point is behind the camera.
+std::optional<ScreenPosition> projectPoint(const CoordinateSystem &cameraSystem,
+                                           const Vector &point) {
+  Vector camVec = point - cameraSystem.origin;
+  double depth = camVec * cameraSystem.z;
+  if (depth <= 0)
+    return {};
+  double cameraX = camVec * cameraSystem.x;
+  double cameraY = camVec * cameraSystem.y;
+  double horizontalRange = 2. * std::tan(HORIZONTAL_FOV / 2);
+  double verticalRange = horizontalRange / WIDTH * HEIGHT;
+  double x = cameraX / horizontalRange * WIDTH + double(WIDTH) / 2.;
+  double y = cameraY / verticalRange * HEIGHT + double(HEIGHT) / 2.;
+  return {{x, y}};
 }
 
 // TODO: implement these functions
@@ -81,13 +99,35 @@ Line matchBoardLine(const ScreenLine &screenLine,
 std::vector<std::pair<ScreenLine, Vector>>
 getConstraints(const ScreenLineSet &screenLines,
                const CoordinateSystem &cameraSystemPreviousFrame);
+
 /// Returns the gradient of the cost function on all pose parameters (the return
 /// type is Pose but in reality only a gradient on the pose parameters are
 /// returned, it's just the exact same fields so we also use pose) at the
 /// current estimate for the pose. The cost function we use is the squared
 /// distance of the distance of the point to the plane.
 Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
-             const Pose &currentEstimate);
+             const Pose &currentEstimate) {
+  // I am only 60% confident that this is correct. It seems a bit too nice to be
+  // correct.
+  CoordinateSystem cameraSystem = getCameraSystem(currentEstimate);
+  Plane plane = planeFromLine(constraint.first, cameraSystem);
+  double dist = constraint.second * plane.normal - plane.d;
+  Vector closePoint = constraint.second - plane.normal * dist;
+  Vector diff = closePoint - constraint.second;
+  Vector tangent = {-closePoint.y, closePoint.x, 0};
+  return {diff.x, diff.y, tangent * diff};
+}
+
+// Can be used for testing and as a break condition.
+double loss(const std::pair<ScreenLine, Vector> &constraint,
+            const Pose &currentEstimate) {
+
+  CoordinateSystem cameraSystem = getCameraSystem(currentEstimate);
+  Plane plane = planeFromLine(constraint.first, cameraSystem);
+  double dist = constraint.second * plane.normal - plane.d;
+  return dist * dist;
+}
+
 /// Uses gradient descent to find the pose for which the given constraints are
 /// satisfied as well as possible.
 Pose optimizePose(const std::vector<std::pair<ScreenLine, Vector>> &constraints,
@@ -112,6 +152,10 @@ int main() {
   Pose pose{0, 0, 0.4};
   auto cs = getCameraSystem(pose);
   printCoordinateSystem(cs);
-  auto p = unprojectPoint(cs, {0, 300});
+  auto p = unprojectPoint(cs, {750, 300});
   printVector("unproj", p);
+  auto projected = projectPoint(cs, p);
+  if (projected.has_value())
+    std::cerr << "Screen position: x = " << projected->x
+              << ", y = " << projected->y << std::endl;
 }

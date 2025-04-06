@@ -9,6 +9,8 @@ struct Vector {
   double z;
   Vector operator+(const Vector &o) const;
   Vector operator*(double f) const;
+  Vector operator-(const Vector &o) const;
+  double operator*(const Vector &o) const;
 };
 
 /// Describes a plane by a normal direction and a d. The plane that is described
