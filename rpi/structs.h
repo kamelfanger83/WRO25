@@ -23,6 +23,15 @@ struct Waypoint {
   // double theta; Brauchen wir maybe später
 };
 
+/// Represents on a Frame captured by the camera.
+/// angle: angle of the direction of the line. In the range of [0, pi ). For a
+///     given angle a, the direction vector of the line is (cos(a), sin(a)).
+/// distanceToOrigin: distance of the line from the origin (0, 0) (top left).
+struct ScreenLine {
+  double angle;
+  double distanceToOrigin;
+};
+
 /// Represents commands for the motors.
 /// Acceptable ranges:
 ///     - 0 <= angle <= 170

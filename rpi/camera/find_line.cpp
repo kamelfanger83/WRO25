@@ -1,17 +1,12 @@
 #include <algorithm>
 #include <cassert>
 #include <cmath>
-#include <cstdint>
 #include <iostream>
 #include <vector>
 
+#include "../structs.h"
 #include "camera.h"
 #include "find_color.cpp"
-
-struct ScreenLine {
-  double angle;
-  double distancetoorigin;
-};
 
 /// This function takes a vector of points which were detected to be of a
 /// specific color. This function draws the best line through this points.
@@ -77,7 +72,7 @@ ScreenLine findLine(std::vector<Point> points) {
   double sum = 0;
 
   for (auto seg : lines) {
-    sum += seg.distancetoorigin;
+    sum += seg.distanceToOrigin;
   }
   sum /= lines.size();
 
@@ -91,8 +86,8 @@ ScreenLine findLine(std::vector<Point> points) {
 /// WARNING: This function modifies the frame that is passed.
 void colorLineInFrame(Frame &frame, const ScreenLine &Line) {
   std::cerr << "AAAsupi" << std::endl;
-  int x1 = sin(Line.angle) * Line.distancetoorigin;
-  int y1 = cos(Line.angle) * Line.distancetoorigin;
+  int x1 = sin(Line.angle) * Line.distanceToOrigin;
+  int y1 = cos(Line.angle) * Line.distanceToOrigin;
   std::cerr << "BBBsupi" << std::endl;
 
   double m = tan(Line.angle);
