@@ -1,10 +1,6 @@
 #include <utility>
 
-struct Coordinate{
-    double x;
-    double y;
-    double z;
-};
+#include "structs.h"
 
 enum Line {
     //outer walls
@@ -53,10 +49,4 @@ std::pair<Coordinate, Coordinate> getStartEndPoints(Line line) {
 
         default: return {{-1, -1, -1}, {-1, -1, -1}}; // Error case
     }
-}
-
-
-
-int main(){
-    return 0;
 }
