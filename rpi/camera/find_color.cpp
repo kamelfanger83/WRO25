@@ -123,3 +123,31 @@ bool isRed(const HSVPixel pixel) {
           pixel.h <= int(10 / 360. * 255)) &&
          isColor(pixel);
 }
+
+bool inBounds(const Frame &frame, const Point point) {
+  return point.x >= 0 && point.x < WIDTH && point.y >= 0 && point.y < HEIGHT;
+}
+
+/// returns wether or not a pixel is a border point
+bool isBorderPoint(const Frame &frame, const Point point) {
+  int x = point.x;
+  int y = point.y;
+
+  if (!isBlack(getPixel(frame, x, y))) {
+    return false;
+  }
+  bool potentialBorder = false;
+
+  const int dx[8] = {-1, -1, -1, 0, 1, 1, 1, 0};
+  const int dy[8] = {-1, 0, 1, 1, 1, 0, -1, -1};
+
+  for (int i = 0; i < 8; ++i) {
+    Point potential = {x + dx[i], y + dy[i]};
+    if (inBounds(frame, potential) &&
+        isWhite(getPixel(frame, potential.x, potential.y))) {
+      potentialBorder = true;
+      return true;
+    }
+  }
+  return false;
+}
