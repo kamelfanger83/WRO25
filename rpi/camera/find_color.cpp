@@ -73,6 +73,22 @@ double directionOfGradientAtPoint(Point x0, const Frame &frame) {
   return std::atan2(gy, gx);
 }
 
+/// Test function for gradient. Returns a vector of points
+/// whose gradient is in the range of a choosen lower and upper bound
+std::vector<Point> gradientPoints(const Frame &frame, double lowerBound,
+                                  double upperBound) {
+  std::vector<Point> points;
+  for (int x = 0; x < WIDTH; ++x) {
+    for (int y = 0; y < HEIGHT; ++y) {
+      double angle = directionOfGradientAtPoint({x, y}, frame);
+      if (lowerBound <= angle && angle <= upperBound) {
+        points.push_back({x, y});
+      }
+    }
+  }
+  return points;
+}
+
 // Whole block of color recognition functions.
 
 /// Returns whether a pixel is considered to have a specific color rather than
