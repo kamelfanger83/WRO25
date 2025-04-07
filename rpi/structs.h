@@ -1,5 +1,5 @@
 #pragma once
-
+#include <optional>
 /// Represents either a position in 3D space (Ortsvektor) or just a vector
 /// without or with another intended startpoint.
 struct Vector {
@@ -30,6 +30,10 @@ struct Waypoint {
 struct ScreenLine {
   double angle;
   double distanceToOrigin;
+};
+
+struct ScreenLineSet{
+  std::optional<ScreenLine> blue, orange, right, back, left;
 };
 
 /// Represents commands for the motors.
