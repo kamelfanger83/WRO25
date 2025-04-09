@@ -3,16 +3,18 @@
 #include <iostream>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "../structs.h"
+#include "../utils.cpp"
 #include "coordinates.cpp"
 #include "utils.cpp"
 // We only need this for width and height. Not ideal.
 #include "../camera/camera.h"
 
 /// The height of the camera origin above the mat in cm.
-#define CAM_HEIGHT 0
+#define CAM_HEIGHT 20
 /// The angle by which the camera is tilted down in radians.
 #define TILT_ANG M_PI / 13
 /// The horizontal FOV angle in radians.
@@ -58,8 +60,8 @@ std::optional<ScreenPosition> projectPoint(const CoordinateSystem &cameraSystem,
   double depth = camVec * cameraSystem.z;
   if (depth <= 0)
     return {};
-  double cameraX = camVec * cameraSystem.x;
-  double cameraY = camVec * cameraSystem.y;
+  double cameraX = (camVec * cameraSystem.x) / depth;
+  double cameraY = (camVec * cameraSystem.y) / depth;
   double horizontalRange = 2. * std::tan(HORIZONTAL_FOV / 2);
   double verticalRange = horizontalRange / WIDTH * HEIGHT;
   double x = cameraX / horizontalRange * WIDTH + double(WIDTH) / 2.;
@@ -67,13 +69,23 @@ std::optional<ScreenPosition> projectPoint(const CoordinateSystem &cameraSystem,
   return {{x, y}};
 }
 
-// TODO: implement these functions
 /// Returns two arbitrary points on a given ScreenLine.
-// Get one of the points by multiplying the vector perpendicular to the line in
-// the correct direction with distanceToOrigin. Then get the second one for
-// example by just adding the direction vector of the line once.
 std::pair<ScreenPosition, ScreenPosition>
-pointsOnLine(const ScreenLine &screenLine);
+pointsOnLine(const ScreenLine &screenLine) {
+  double x1 = -sin(screenLine.angle) * screenLine.distanceToOrigin;
+  double y1 = cos(screenLine.angle) * screenLine.distanceToOrigin;
+  double x2 = x1 + 100 * cos(screenLine.angle);
+  double y2 = y1 + 100 * sin(screenLine.angle);
+  return {{x1, y1}, {x2, y2}};
+}
+
+// Temporary testing functions
+void printVector(const std::string &name, const Vector &v) {
+  std::cout << std::fixed << std::setprecision(3);
+  std::cout << "  " << name << ": (" << v.x << ", " << v.y << ", " << v.z
+            << ")\n";
+}
+
 /// Returns the plane that corresponds to a ScreenLine. By correspond I mean
 /// that points on that ScreenLine could come from anywhere on that plane. If
 /// you think about what shape you obtain by "unprojecting" a line on a camera
@@ -84,21 +96,87 @@ pointsOnLine(const ScreenLine &screenLine);
 // Calculate d by tking the dotproduct of the camera origin with the normal
 // vector as we know that the camera origin is on the plane.
 Plane planeFromLine(const ScreenLine &screenLine,
-                    const CoordinateSystem &cameraSystem);
-/// Matches a ScreenLine to a line on the board by taking the line on the board
+                    const CoordinateSystem &cameraSystem) {
+  auto [p1, p2] = pointsOnLine(screenLine);
+  Vector d1 = unprojectPoint(cameraSystem, p1) - cameraSystem.origin;
+  Vector d2 = unprojectPoint(cameraSystem, p2) - cameraSystem.origin;
+  Vector perp = crossP(d1, d2);
+  Vector normal = perp * (1. / sqrt(perp * perp));
+  double d = normal * cameraSystem.origin;
+  return {normal, d};
+}
+
+/// Returns the squared distance of the point to the plane of the line.
+double loss(const std::pair<ScreenLine, Vector> &constraint,
+            const Pose &currentEstimate) {
+  CoordinateSystem cameraSystem = getCameraSystem(currentEstimate);
+  Plane plane = planeFromLine(constraint.first, cameraSystem);
+  double dist = constraint.second * plane.normal - plane.d;
+  return dist * dist;
+}
+
+// Matches a ScreenLine to a line on the board by taking the line on the board
 /// where the endpoints have the smallest distance to the plane of the
 /// ScreenLine. Also discards candidates which are very far from being visible
 /// on the screen.
-Line matchBoardLine(const ScreenLine &screenLine,
-                    const CoordinateSystem &cameraSystemPreviousFrame,
-                    Line candidates[4]);
+std::optional<Line> matchBoardLine(const ScreenLine &screenLine,
+                                   const Pose &posePreviousFrame,
+                                   Line candidates[4]) {
+  CoordinateSystem cameraSystemPreviousFrame =
+      getCameraSystem(posePreviousFrame);
+  Line bestCandidate = Line::INVALID;
+  double bestLoss = 1e9;
+  for (int i = 0; i < 4; ++i) {
+    auto [s, e] = getStartEndPoints(candidates[i]);
+    bool inRange = false;
+    for (double t = 0; t < 1. + 1e-5 && !inRange; t += 0.05) {
+      Vector v = s * (1. - t) + e * t;
+      if (auto projected = projectPoint(cameraSystemPreviousFrame, v)) {
+        inRange |= projected->x >= 0 && projected->x < WIDTH &&
+                   projected->y >= 0 && projected->y < HEIGHT;
+      }
+    }
+    if (!inRange)
+      continue;
+    double candidateLoss = loss({screenLine, s}, posePreviousFrame) +
+                           loss({screenLine, e}, posePreviousFrame);
+    if (candidateLoss < bestLoss) {
+      bestLoss = candidateLoss;
+      bestCandidate = candidates[i];
+    }
+  }
+  // TODO: tweak this number
+  if (bestLoss < /*200. */ 1e9)
+    return {bestCandidate};
+  else
+    return {};
+}
+
 /// Returns a vector of constraints for the optimization process. Each
 /// constraint is of the form that a 3D point (and endpoint of the matched line)
 /// needs to be close to the plane of a ScreenLine. Thus we represent them as
 /// pairs of ScreenLine and 3D Points.
 std::vector<std::pair<ScreenLine, Vector>>
 getConstraints(const ScreenLineSet &screenLines,
-               const CoordinateSystem &cameraSystemPreviousFrame);
+               const Pose &posePreviousFrame) {
+  std::vector<std::pair<ScreenLine, Vector>> constraints;
+  auto matchAddConstraints = [&](const std::optional<ScreenLine> &screenLineOpt,
+                                 Line candidates[4]) {
+    if (!screenLineOpt.has_value())
+      return;
+    ScreenLine screenLine = *screenLineOpt;
+    if (auto line = matchBoardLine(screenLine, posePreviousFrame, candidates)) {
+      auto [s, e] = getStartEndPoints(*line);
+      constraints.push_back({screenLine, s});
+      constraints.push_back({screenLine, e});
+    }
+  };
+  matchAddConstraints(screenLines.blue, blueLines);
+  matchAddConstraints(screenLines.orange, orangeLines);
+  matchAddConstraints(screenLines.outer, outerLines);
+  matchAddConstraints(screenLines.hind, outerLines);
+  return constraints;
+}
 
 /// Returns the gradient of the cost function on all pose parameters (the return
 /// type is Pose but in reality only a gradient on the pose parameters are
@@ -119,26 +197,33 @@ Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
   return {diff.x, diff.y, tangent * diff};
 }
 
-// Can be used for testing and as a break condition.
-double loss(const std::pair<ScreenLine, Vector> &constraint,
-            const Pose &currentEstimate) {
-
-  CoordinateSystem cameraSystem = getCameraSystem(currentEstimate);
-  Plane plane = planeFromLine(constraint.first, cameraSystem);
-  double dist = constraint.second * plane.normal - plane.d;
-  return dist * dist;
-}
-
 /// Uses gradient descent to find the pose for which the given constraints are
 /// satisfied as well as possible.
-Pose optimizePose(const std::vector<std::pair<ScreenLine, Vector>> &constraints,
-                  const Pose &startPoint);
-
-// Temporary testing functions
-void printVector(const std::string &name, const Vector &v) {
-  std::cout << std::fixed << std::setprecision(3);
-  std::cout << "  " << name << ": (" << v.x << ", " << v.y << ", " << v.z
-            << ")\n";
+std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
+                                 const Pose &posePreviousFrame) {
+  auto constraints = getConstraints(screenLines, posePreviousFrame);
+  Pose pose = posePreviousFrame;
+  const float learningRate = 0.01;
+  for (int epoch = 0; epoch < 100; ++epoch) {
+    Pose adjustment{0, 0, 0};
+    for (auto constraint : constraints) {
+      adjustment = adjustment + getGrad(constraint, pose);
+    }
+    pose = pose + adjustment * -learningRate;
+  }
+  double totalLoss = 0;
+  for (auto constraint : constraints) {
+    totalLoss += loss(constraint, pose);
+  }
+  // TODO: tweak this number.
+  if (totalLoss < 20.) {
+    return {pose};
+  } else {
+    std::cerr
+        << "No pose which makes a sufficient amount of sense could be found"
+        << std::endl;
+    return {};
+  }
 }
 
 void printCoordinateSystem(const CoordinateSystem &cs) {
@@ -150,7 +235,7 @@ void printCoordinateSystem(const CoordinateSystem &cs) {
 }
 
 int main() {
-  Pose pose{0, 0, 0.4};
+  Pose pose{200, 50, 0.4 + M_PI};
   auto cs = getCameraSystem(pose);
   printCoordinateSystem(cs);
   auto p = unprojectPoint(cs, {750, 300});
@@ -159,4 +244,11 @@ int main() {
   if (projected.has_value())
     std::cerr << "Screen position: x = " << projected->x
               << ", y = " << projected->y << std::endl;
+  ScreenLineSet screenLines{{}, {}, ScreenLine{M_PI / 4 * 3, 200}, {}};
+  ScreenLine screenLine = *screenLines.outer;
+  auto match = matchBoardLine(screenLine, pose, outerLines);
+  if (match.has_value())
+    std::cout << "We found a match: " << *match << std::endl;
+  else
+    std::cout << "No match was found" << std::endl;
 }

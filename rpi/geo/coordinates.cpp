@@ -11,6 +11,7 @@ enum Line {
     ORANGE_1, ORANGE_2, ORANGE_3, ORANGE_4,
     //blue lines
     BLUE_1, BLUE_2, BLUE_3, BLUE_4,
+    INVALID,
 };
 
 

@@ -36,6 +36,9 @@ struct Pose {
   double x;
   double y;
   double theta;
+
+  Pose operator+(const Pose &o) const;
+  Pose operator*(double f) const;
 };
 
 /// Represents a point on that field that is scheduled to be visited.
