@@ -113,8 +113,9 @@ Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
   Plane plane = planeFromLine(constraint.first, cameraSystem);
   double dist = constraint.second * plane.normal - plane.d;
   Vector closePoint = constraint.second - plane.normal * dist;
+  Vector closePointCamera = closePoint - cameraSystem.origin;
   Vector diff = closePoint - constraint.second;
-  Vector tangent = {-closePoint.y, closePoint.x, 0};
+  Vector tangent = {-closePointCamera.y, closePointCamera.x, 0};
   return {diff.x, diff.y, tangent * diff};
 }
 
