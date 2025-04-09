@@ -29,7 +29,7 @@ ScreenLine findLine(std::vector<Point> points) {
   std::vector<ProbedLine> lines;
 
   const int distanceThreshold = 100;
-  const int targetLineCount = 1000;
+  const int targetLineCount = 2000;
 
   for (int tries = 0; lines.size() < targetLineCount && tries < 10000;
        ++tries) {
@@ -124,13 +124,13 @@ ScreenLine findLine(std::vector<Point> points) {
 /// It colors the line in green.
 /// WARNING: This function modifies the frame that is passed.
 void colorLineInFrame(Frame &frame, const ScreenLine &Line) {
-  int x1 = -sin(Line.angle) * Line.distanceToOrigin;
-  int y1 = cos(Line.angle) * Line.distanceToOrigin;
+  double x1 = -sin(Line.angle) * Line.distanceToOrigin;
+  double y1 = cos(Line.angle) * Line.distanceToOrigin;
 
   double m = tan(Line.angle);
 
   for (int x = 0; x < WIDTH; ++x) {
-    int y = m * (x - x1) + y1;
+    int y = std::round(m * (x - x1) + y1);
     if (y >= 0 && y < HEIGHT) {
       HSVPixel &pixel = frame.HSV[y * WIDTH + x];
       pixel.h = 200;
