@@ -145,7 +145,7 @@ bool isBorderPoint(const Frame &frame, const Point point) {
         continue;
       }
 
-      HSVPixel &pixel = frame.HSV[(x + s) + (y + i) * WIDTH];
+      HSVPixel &pixel = frame.HSV[potential.y * WIDTH + potential.x];
       if (isBlack(pixel)) {
         blackPointCounter += 1;
       }
