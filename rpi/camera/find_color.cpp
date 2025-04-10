@@ -73,6 +73,22 @@ double directionOfGradientAtPoint(Point x0, const Frame &frame) {
   return std::atan2(gy, gx);
 }
 
+/// Test function for gradient. Returns a vector of points
+/// whose gradient is in the range of a choosen lower and upper bound
+std::vector<Point> gradientPoints(const Frame &frame, double lowerBound,
+                                  double upperBound) {
+  std::vector<Point> points;
+  for (int x = 0; x < WIDTH; ++x) {
+    for (int y = 0; y < HEIGHT; ++y) {
+      double angle = directionOfGradientAtPoint({x, y}, frame);
+      if (lowerBound <= angle && angle <= upperBound) {
+        points.push_back({x, y});
+      }
+    }
+  }
+  return points;
+}
+
 // Whole block of color recognition functions.
 
 /// Returns whether a pixel is considered to have a specific color rather than
@@ -106,4 +122,38 @@ bool isRed(const HSVPixel pixel) {
   return (int(350 / 360. * 255) <= pixel.h ||
           pixel.h <= int(10 / 360. * 255)) &&
          isColor(pixel);
+}
+
+bool inBounds(const Frame &frame, const Point point) {
+  return point.x >= 0 && point.x < WIDTH && point.y >= 0 && point.y < HEIGHT;
+}
+
+/// returns wether or not a pixel is a border point
+bool isBorderPoint(const Frame &frame, const Point point) {
+  int x = point.x;
+  int y = point.y;
+
+  int blackPointCounter = 0;
+  int whitePointCounter = 0;
+  for (int s = -1; s <= 1; s++) {
+    for (int i = -1; i <= 1; i++) {
+      Point potential;
+      potential.x = x + s;
+      potential.y = y + i;
+
+      if (!inBounds(frame, potential)) {
+        continue;
+      }
+
+      HSVPixel &pixel = frame.HSV[potential.y * WIDTH + potential.x];
+      if (isBlack(pixel)) {
+        blackPointCounter += 1;
+      }
+      if (isWhite(pixel)) {
+        whitePointCounter += 1;
+      }
+    }
+  }
+
+  return (whitePointCounter >= 3) && (blackPointCounter >= 3);
 }
