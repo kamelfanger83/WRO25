@@ -173,8 +173,9 @@ getConstraints(const ScreenLineSet &screenLines,
   };
   matchAddConstraints(screenLines.blue, blueLines);
   matchAddConstraints(screenLines.orange, orangeLines);
-  matchAddConstraints(screenLines.outer, outerLines);
-  matchAddConstraints(screenLines.hind, outerLines);
+  matchAddConstraints(screenLines.left, outerLines);
+  matchAddConstraints(screenLines.back, outerLines);
+  matchAddConstraints(screenLines.right, innerLines);
   return constraints;
 }
 
@@ -253,8 +254,8 @@ int main() {
   if (projected.has_value())
     std::cerr << "Screen position: x = " << projected->x
               << ", y = " << projected->y << std::endl;
-  ScreenLineSet screenLines{{}, {}, {}, ScreenLine{0.1, 200}};
-  ScreenLine screenLine = *screenLines.hind;
+  ScreenLineSet screenLines{{}, {}, {}, ScreenLine{0.1, 200}, {}};
+  ScreenLine screenLine = *screenLines.back;
   auto match = matchBoardLine(screenLine, pose, outerLines);
   if (match.has_value())
     std::cout << "We found a match: " << *match << std::endl;
