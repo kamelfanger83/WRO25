@@ -32,17 +32,12 @@ std::vector<Point> mask(const Frame &frame, bool (*is_color)(const HSVPixel)) {
 }
 
 /// Test function for color recognition, colors in the Pixels that are
-/// recognized to be of a certain color in neon green and saves the frame as a
-/// png.
-/// CAUTION: This function modifies the frame that is passed.
-void colorColor(Frame &frame, std::vector<Point> points) {
+/// passed in the given color.
+void colorColor(Frame &frame, std::vector<Point> points,
+                HSVPixel color = {100, 255, 255}) {
   for (Point p : points) {
-    HSVPixel &pixel = frame.HSV[p.y * WIDTH + p.x];
-    pixel.h = 0;
-    pixel.s = 255;
-    pixel.v = 255;
+    frame.HSV[p.y * WIDTH + p.x] = color;
   }
-  saveFrame(frame);
 }
 
 /// Gradient function. Takes a frame and a point and returns the direction of

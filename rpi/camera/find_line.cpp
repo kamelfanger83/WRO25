@@ -2,6 +2,7 @@
 #include <cassert>
 #include <cmath>
 #include <iostream>
+#include <optional>
 #include <vector>
 
 #include "../structs.h"
@@ -13,12 +14,10 @@
 /// Assumptions: There is only one line.
 /// Assumptions: The points outside the field are ment to be already filtered
 /// out.
-// TODO: make this return an std::optional
-ScreenLine findLine(std::vector<Point> points) {
+std::optional<ScreenLine> findLine(std::vector<Point> points) {
   if (points.size() < 10) {
-    std::cerr << "Unfortunately there were to few points" << std::endl;
-    // TODO: return None
-    assert(false);
+    std::cerr << "Insufficient points to find a line." << std::endl;
+    return {};
   }
 
   struct ProbedLine {
@@ -55,8 +54,7 @@ ScreenLine findLine(std::vector<Point> points) {
     std::cerr << "The points were too close together, insufficient lines could "
                  "be formed"
               << std::endl;
-    // TODO: return None
-    assert(false);
+    return {};
   }
 
   std::sort(lines.begin(), lines.end(),
@@ -83,7 +81,12 @@ ScreenLine findLine(std::vector<Point> points) {
     if (count > countMax) {
       countMax = count;
       maxRangeL = lines[i].angle;
-      maxRangeR = lines[(r - 1 + lines.size()) % lines.size()].angle;
+      if (r > i)
+        maxRangeR = lines[r - 1].angle;
+      else if (r == 0)
+        maxRangeR = lines[lines.size() - 1].angle;
+      else
+        maxRangeR = lines[r - 1].angle + M_PI;
     }
   }
 
@@ -112,32 +115,58 @@ ScreenLine findLine(std::vector<Point> points) {
   }
 
   if (cnt < 50.) {
-    std::cerr << "Too few lines were in the best range" << std::endl;
-    // TODO: return None
-    assert(false);
+    std::cerr << "Too few lines were in the best angle range." << std::endl;
+    return {};
   }
 
   return ScreenLine{finalAngle, sum / cnt};
 }
 
-/// This function takes a frame and a line and draws the line in the frame.
-/// It colors the line in green.
-/// WARNING: This function modifies the frame that is passed.
-void colorLineInFrame(Frame &frame, const ScreenLine &Line) {
+/// This function takes a frame and a line and draws the line in the frame in
+/// the given color.
+void drawLineInFrame(Frame &frame, const ScreenLine &Line,
+                     HSVPixel color = {200, 255, 255}) {
   double x1 = -sin(Line.angle) * Line.distanceToOrigin;
   double y1 = cos(Line.angle) * Line.distanceToOrigin;
 
-  double m = tan(Line.angle);
-
+  double xm = tan(Line.angle);
   for (int x = 0; x < WIDTH; ++x) {
-    int y = std::round(m * (x - x1) + y1);
+    int y = std::round(xm * (x - x1) + y1);
     if (y >= 0 && y < HEIGHT) {
-      HSVPixel &pixel = frame.HSV[y * WIDTH + x];
-      pixel.h = 200;
-      pixel.s = 255;
-      pixel.v = 255;
+      frame.HSV[y * WIDTH + x] = color;
     }
   }
 
-  saveFrame(frame);
+  double ym = tan(M_PI_2 - Line.angle);
+  for (int y = 0; y < HEIGHT; ++y) {
+    int x = std::round(ym * (y - y1) + x1);
+    if (x >= 0 && x < WIDTH) {
+      frame.HSV[y * WIDTH + x] = color;
+    }
+  }
+}
+
+// WIP
+ScreenLineSet analyseFrame(const Frame &frame) {
+  ScreenLineSet lines;
+
+  unsigned int threshold =
+      250; // number of points needed to say that there is a line to be analysed
+  auto bluepoints = mask(frame, isBlue);
+  auto orangepoints = mask(frame, isOrange);
+
+  // stores colored line iff it ∃ (= enough points of that color).
+  if (bluepoints.size() >= threshold)
+    lines.blue = findLine(bluepoints);
+  if (orangepoints.size() >= threshold)
+    lines.orange = findLine(orangepoints);
+
+  /*
+  Idea how to treat gradient:
+  make a threshold for the magnitude of the gradient to consider to be a border
+  of the field.
+
+  */
+
+  return lines;
 }
