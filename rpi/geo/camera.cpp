@@ -29,6 +29,92 @@ struct CoordinateSystem {
   Vector x, y, z, origin;
 };
 
+/// Computes a point on the plane (projection of origin)
+Vector computePlanePoint(const Plane &plane) {
+  double normSq = plane.normal.x * plane.normal.x +
+                  plane.normal.y * plane.normal.y +
+                  plane.normal.z * plane.normal.z;
+  // Avoid divide-by-zero (should not happen if the plane is valid)
+  if (normSq < 1e-9) {
+    std::cerr << "Error: The plane's normal is nearly zero.\n";
+    return {0, 0, 0};
+  }
+  double factor = plane.d / normSq;
+  return {plane.normal.x * factor, plane.normal.y * factor,
+          plane.normal.z * factor};
+}
+
+/// Prints a Python (bpy) script that adds a plane in Blender at the same
+/// location and orientation as the given Plane.
+void printPlaneToBlenderScript(const Plane &plane) {
+  // Compute a point on the plane (this will be the location).
+  Vector point = computePlanePoint(plane);
+
+  // Normalize the plane normal.
+  double norm = std::sqrt(plane.normal.x * plane.normal.x +
+                          plane.normal.y * plane.normal.y +
+                          plane.normal.z * plane.normal.z);
+  if (norm < 1e-9) {
+    std::cerr << "Error: Invalid normal vector (zero length).\n";
+    return;
+  }
+  double nx = plane.normal.x / norm;
+  double ny = plane.normal.y / norm;
+  double nz = plane.normal.z / norm;
+
+  // The default normal for a plane in Blender is (0, 0, 1).
+  double ax = 0.0, ay = 0.0, az = 1.0;
+
+  // Compute the dot product and the rotation angle.
+  double dot = ax * nx + ay * ny + az * nz;
+  // Clamp the dot product in case of numerical inaccuracies.
+  if (dot > 1.0)
+    dot = 1.0;
+  if (dot < -1.0)
+    dot = -1.0;
+  double angle = std::acos(dot);
+
+  // Compute rotation axis = cross((0,0,1), (nx, ny, nz)).
+  double rx = ay * nz - az * ny; // = 0*nz - 1*ny = -ny
+  double ry = az * nx - ax * nz; // = 1*nx - 0*nz = nx
+  double rz = ax * ny - ay * nx; // = 0 - 0 = 0
+
+  // Compute length of rotation axis.
+  double rlen = std::sqrt(rx * rx + ry * ry + rz * rz);
+  // If the axis is very small, the default cases apply.
+  if (rlen < 1e-9) {
+    if (dot < 0) { // means the normals are opposite; rotate 180°.
+      rx = 1.0;
+      ry = 0.0;
+      rz = 0.0;
+      angle = M_PI;
+    } else { // normals are parallel: no rotation needed.
+      rx = ry = rz = 0.0;
+      angle = 0.0;
+    }
+  } else {
+    rx /= rlen;
+    ry /= rlen;
+    rz /= rlen;
+  }
+
+  // Now print out the Blender Python script.
+  std::cout << "import bpy\n";
+  std::cout << "import math\n";
+  std::cout << "import mathutils\n\n";
+
+  std::cout << "location = (" << point.x << ", " << point.y << ", " << point.z
+            << ")\n";
+  std::cout << "axis = (" << rx << ", " << ry << ", " << rz << ")\n";
+  std::cout << "angle = " << angle << "\n\n";
+
+  std::cout << "quat = mathutils.Quaternion(axis, angle)\n";
+  std::cout << "euler = quat.to_euler()\n\n";
+
+  std::cout << "bpy.ops.mesh.primitive_plane_add(location=location, "
+               "rotation=euler)\n";
+}
+
 CoordinateSystem getCameraSystem(const Pose &pose) {
   Vector x{std::cos(pose.theta - M_PI_2f64), std::sin(pose.theta - M_PI_2f64),
            0};
@@ -140,6 +226,9 @@ std::optional<Line> matchBoardLine(const ScreenLine &screenLine,
       continue;
     double candidateLoss = loss({screenLine, s}, posePreviousFrame) +
                            loss({screenLine, e}, posePreviousFrame);
+    auto plane = planeFromLine(screenLine, cameraSystemPreviousFrame);
+    printPlaneToBlenderScript(plane);
+    std::cerr << "candidate #" << i << ", loss: " << candidateLoss << std::endl;
     if (candidateLoss < bestLoss) {
       bestLoss = candidateLoss;
       bestCandidate = candidates[i];
@@ -194,7 +283,13 @@ Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
   Vector closePointCamera = closePoint - cameraSystem.origin;
   Vector diff = closePoint - constraint.second;
   Vector tangent = {-closePointCamera.y, closePointCamera.x, 0};
-  return {diff.x, diff.y, tangent * diff};
+  double thetaGrad = tangent * diff;
+  return {diff.x, diff.y, thetaGrad * 0.001};
+}
+
+void printPose(const Pose &pose) {
+  std::cout << "Pose(x=" << pose.x << ", y=" << pose.y
+            << ", theta=" << pose.theta << ")" << std::endl;
 }
 
 /// Uses gradient descent to find the pose for which the given constraints are
@@ -203,20 +298,25 @@ std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
                                  const Pose &posePreviousFrame) {
   auto constraints = getConstraints(screenLines, posePreviousFrame);
   Pose pose = posePreviousFrame;
+  printPose(pose);
   const float learningRate = 0.01;
-  for (int epoch = 0; epoch < 100; ++epoch) {
+  for (int epoch = 0; epoch < 1000; ++epoch) {
     Pose adjustment{0, 0, 0};
+    int i = 0;
     for (auto constraint : constraints) {
       adjustment = adjustment + getGrad(constraint, pose);
+      std::cerr << "Loss for constraint #" << i++ << ": "
+                << loss(constraint, pose) << std::endl;
     }
     pose = pose + adjustment * -learningRate;
+    printPose(pose);
   }
   double totalLoss = 0;
   for (auto constraint : constraints) {
     totalLoss += loss(constraint, pose);
   }
   // TODO: tweak this number.
-  if (totalLoss < 20.) {
+  if (totalLoss < 200.) {
     return {pose};
   } else {
     std::cerr
@@ -244,11 +344,16 @@ int main() {
   if (projected.has_value())
     std::cerr << "Screen position: x = " << projected->x
               << ", y = " << projected->y << std::endl;
-  ScreenLineSet screenLines{{}, {}, ScreenLine{M_PI / 4 * 3, 200}, {}};
-  ScreenLine screenLine = *screenLines.outer;
+  ScreenLineSet screenLines{{}, {}, {}, ScreenLine{0.1, 200}};
+  ScreenLine screenLine = *screenLines.hind;
   auto match = matchBoardLine(screenLine, pose, outerLines);
   if (match.has_value())
     std::cout << "We found a match: " << *match << std::endl;
   else
     std::cout << "No match was found" << std::endl;
+  auto optPose = *optimizePose(screenLines, pose);
+  auto plane = planeFromLine(screenLine, getCameraSystem(optPose));
+  printPlaneToBlenderScript(plane);
+  std::cout << "d = " << plane.d << std::endl;
+  printVector("normal", plane.normal);
 }
