@@ -133,21 +133,19 @@ bool isBorderPoint(const Frame &frame, const Point point) {
   int x = point.x;
   int y = point.y;
 
-  if (!isBlack(getPixel(frame, x, y))) {
-    return false;
-  }
-  bool potentialBorder = false;
-
-  const int dx[8] = {-1, -1, -1, 0, 1, 1, 1, 0};
-  const int dy[8] = {-1, 0, 1, 1, 1, 0, -1, -1};
-
-  for (int i = 0; i < 8; ++i) {
-    Point potential = {x + dx[i], y + dy[i]};
-    if (inBounds(frame, potential) &&
-        isWhite(getPixel(frame, potential.x, potential.y))) {
-      potentialBorder = true;
-      return true;
+  int blackPointCounter = 0;
+  int whitePointCounter = 0;
+  for (int s = -1; s <= 1; s++) {
+    for (int i = -1; i <= 1; i++) {
+      HSVPixel &pixel = frame.HSV[(x + s) + (y + i) * WIDTH];
+      if (isBlack(pixel)) {
+        blackPointCounter += 1;
+      }
+      if (isWhite(pixel)) {
+        whitePointCounter += 1;
+      }
     }
   }
-  return false;
+
+  return (whitePointCounter >= 3) && (blackPointCounter >= 3);
 }
