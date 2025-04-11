@@ -137,6 +137,7 @@ void drawLineInFrame(Frame &frame, const ScreenLine &Line,
     }
   }
 
+
   double ym = tan(M_PI_2 - Line.angle);
   for (int y = 0; y < HEIGHT; ++y) {
     int x = std::round(ym * (y - y1) + x1);
@@ -145,6 +146,39 @@ void drawLineInFrame(Frame &frame, const ScreenLine &Line,
     }
   }
 }
+
+
+/// This function takes a frame, a line and a point and says if the point is below the line.
+bool isBelow(Frame &frame, const ScreenLine &Line,
+  Point &point) {
+
+  double x1 = -sin(Line.angle) * Line.distanceToOrigin;
+  double y1 = cos(Line.angle) * Line.distanceToOrigin;
+
+  double xm = tan(Line.angle);
+  int x = point.x;
+
+  int y_line = std::round(xm * (point.x - x1) + y1);
+
+  return (point.y > y_line);
+}
+
+
+
+/// This function takes a frame, a line and a point and says if the point is right the line.
+bool isRight(Frame &frame, const ScreenLine &Line,
+  Point &point) {
+
+  double x1 = -sin(Line.angle) * Line.distanceToOrigin;
+  double y1 = cos(Line.angle) * Line.distanceToOrigin;
+
+  double ym = tan(M_PI_2 - Line.angle);
+
+  int x_line = std::round(ym * (point.y - y1) + x1);
+
+  return (point.x > x_line);
+  }
+
 
 // WIP
 ScreenLineSet analyseFrame(const Frame &frame) {
