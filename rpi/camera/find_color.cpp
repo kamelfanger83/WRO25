@@ -59,10 +59,10 @@ double directionOfGradientAtPoint(Point x0, const Frame &frame) {
   // Apply Sobel filter
   for (int i = -1; i <= 1; ++i) {
     for (int j = -1; j <= 1; ++j) {
-      HSVPixel pixel = frame.HSV[(y + i) * WIDTH + HEIGHT];
+      HSVPixel pixel = frame.HSV[(y + i) * WIDTH + (x + j)];
 
       // This is only an approximation but it should be fine
-      double greyscale = (double)pixel.v / 255.;
+      double greyscale = double(pixel.v) / 255.;
 
       // Convolve with Sobel kernels
       gx += greyscale * Gx[i + 1][j + 1];
@@ -94,7 +94,7 @@ std::vector<Point> gradientPoints(const Frame &frame, double lowerBound,
 /// Returns whether a pixel is considered to have a specific color rather than
 /// some mix or some shade of grey.
 bool isColor(const HSVPixel pixel) {
-  return pixel.s > int(0.55 * 255) && pixel.v > int(0.35 * 255);
+  return pixel.s > int(0.40 * 255) && pixel.v > int(0.35 * 255);
 }
 
 bool isBlue(const HSVPixel pixel) {
@@ -107,7 +107,11 @@ bool isOrange(const HSVPixel pixel) {
          isColor(pixel);
 }
 
-bool isBlack(const HSVPixel pixel) { return pixel.v < int(0.2 * 255); }
+bool isBlack(const HSVPixel pixel) {
+  // return pixel.v < int(0.2 * 255);
+  return int(190 / 360. * 255) <= pixel.h && pixel.h <= int(205 / 360. * 255) &&
+         isColor(pixel);
+}
 
 bool isWhite(const HSVPixel pixel) {
   return pixel.s < int(0.15 * 255) && pixel.v > int(0.75 * 255);
@@ -135,14 +139,14 @@ bool isBorderPoint(const Frame &frame, const Point point) {
 
   int blackPointCounter = 0;
   int whitePointCounter = 0;
-  for (int s = -1; s <= 1; s++) {
-    for (int i = -1; i <= 1; i++) {
+  for (int s = -2; s <= 2; s++) {
+    for (int i = -2; i <= 2; i++) {
       Point potential;
       potential.x = x + s;
       potential.y = y + i;
 
       if (!inBounds(frame, potential)) {
-        continue;
+        return false;
       }
 
       HSVPixel &pixel = frame.HSV[potential.y * WIDTH + potential.x];
@@ -155,5 +159,5 @@ bool isBorderPoint(const Frame &frame, const Point point) {
     }
   }
 
-  return (whitePointCounter >= 3) && (blackPointCounter >= 3);
+  return (whitePointCounter >= 7) && (blackPointCounter >= 7);
 }
