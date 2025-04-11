@@ -14,11 +14,11 @@
 #include "../camera/camera.h"
 
 /// The height of the camera origin above the mat in cm.
-#define CAM_HEIGHT 20
+#define CAM_HEIGHT 12.7
 /// The angle by which the camera is tilted down in radians.
 #define TILT_ANG M_PI / 13
 /// The horizontal FOV angle in radians.
-#define HORIZONTAL_FOV M_PI / 2
+#define HORIZONTAL_FOV 1.1519173061
 
 /// Describes another coordinate system relative to the standard coordinate
 /// system. x, y, z form an orthonormal basis and point in the positive x, y, z

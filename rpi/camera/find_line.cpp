@@ -146,27 +146,95 @@ void drawLineInFrame(Frame &frame, const ScreenLine &Line,
   }
 }
 
+/// This function takes a frame, a line and a point and says if the point is
+/// below the line.
+bool isBelow(const ScreenLine &Line, Point &point) {
+
+  double x1 = -sin(Line.angle) * Line.distanceToOrigin;
+  double y1 = cos(Line.angle) * Line.distanceToOrigin;
+
+  double xm = tan(Line.angle);
+
+  int y_line = std::round(xm * (point.x - x1) + y1);
+
+  return (point.y > y_line);
+}
+
+/// This function takes a frame, a line and a point and says if the point is
+/// right the line.
+bool isRight(const ScreenLine &Line, Point &point) {
+
+  double x1 = -sin(Line.angle) * Line.distanceToOrigin;
+  double y1 = cos(Line.angle) * Line.distanceToOrigin;
+
+  double ym = tan(M_PI_2 - Line.angle);
+
+  int x_line = std::round(ym * (point.y - y1) + x1);
+
+  return (point.x > x_line);
+}
+
+struct BorderPointPartition {
+  std::vector<Point> right, back, left;
+};
+
+BorderPointPartition findBorderPoints(const Frame &frame) {
+  BorderPointPartition result;
+  for (int x = 0; x < WIDTH; ++x) {
+    for (int y = 0; y < HEIGHT; ++y) {
+      Point p{x, y};
+      if (isBorderPoint(frame, p)) {
+        double gradAngle = directionOfGradientAtPoint(p, frame);
+        if (M_PI_4 <= gradAngle && gradAngle < 3 * M_PI_4)
+          result.back.push_back(p);
+        else if (-M_PI_4 <= gradAngle && gradAngle < M_PI_4)
+          result.left.push_back(p);
+        else if (3 * M_PI_4 <= gradAngle || gradAngle < -3 * M_PI_4)
+          result.right.push_back(p);
+      }
+    }
+  }
+  return result;
+}
+
 // WIP
-ScreenLineSet analyseFrame(const Frame &frame) {
+ScreenLineSet findLines(Frame &frame) {
   ScreenLineSet lines;
 
-  unsigned int threshold =
-      250; // number of points needed to say that there is a line to be analysed
-  auto bluepoints = mask(frame, isBlue);
-  auto orangepoints = mask(frame, isOrange);
+  BorderPointPartition borderPartition = findBorderPoints(frame);
 
-  // stores colored line iff it ∃ (= enough points of that color).
-  if (bluepoints.size() >= threshold)
-    lines.blue = findLine(bluepoints);
-  if (orangepoints.size() >= threshold)
-    lines.orange = findLine(orangepoints);
+  colorColor(frame, borderPartition.left, {113, 255, 255});
+  colorColor(frame, borderPartition.back, {239, 255, 255});
+  colorColor(frame, borderPartition.right, {64, 255, 255});
 
-  /*
-  Idea how to treat gradient:
-  make a threshold for the magnitude of the gradient to consider to be a border
-  of the field.
+  lines.left = findLine(borderPartition.left);
+  lines.back = findLine(borderPartition.back);
+  lines.right = findLine(borderPartition.right);
 
-  */
+  std::vector<Point> orangePoints, bluePoints;
+  for (int x = 0; x < WIDTH; ++x) {
+    for (int y = 0; y < HEIGHT; ++y) {
+      Point p{x, y};
+      bool inField = true;
+      if (lines.left.has_value())
+        inField &= isRight(*lines.left, p);
+      if (lines.back.has_value())
+        inField &= isBelow(*lines.back, p);
+      if (lines.right.has_value())
+        inField &= !isRight(*lines.right, p);
+      if (inField) {
+        if (isOrange(frame.HSV[p.y * WIDTH + p.x]))
+          orangePoints.push_back(p);
+        if (isBlue(frame.HSV[p.y * WIDTH + p.x]))
+          bluePoints.push_back(p);
+      }
+    }
+  }
+
+  colorColor(frame, orangePoints, {200, 255, 255});
+
+  lines.blue = findLine(bluePoints);
+  lines.orange = findLine(orangePoints);
 
   return lines;
 }
