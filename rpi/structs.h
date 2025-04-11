@@ -69,3 +69,8 @@ struct Commands {
   int angle;
   int speed;
 };
+
+/// State of the controller for PD control
+struct ControllerState {
+  double prev_error = 0;
+};
