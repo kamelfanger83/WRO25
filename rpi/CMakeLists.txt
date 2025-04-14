@@ -37,11 +37,10 @@ else()
 endif()
 
 # Add the executable
-add_executable(camera_capture test.cpp camera.cpp)
+add_executable(camera_test camera/test.cpp camera/camera.cpp)
 
 # Link to libcamera if available
 if(WITH_LIBCAMERA)
-    target_link_libraries(camera_capture PkgConfig::LIBCAMERA PRIVATE USE_LIBCAMERA)
-else()
-    target_compile_definitions(camera_capture)
+    target_compile_definitions(camera_test PRIVATE USE_LIBCAMERA)
+    target_link_libraries(camera_test PkgConfig::LIBCAMERA)
 endif()
