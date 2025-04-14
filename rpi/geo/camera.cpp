@@ -16,9 +16,9 @@
 #include "../camera/find_line.cpp"
 
 /// The height of the camera origin above the mat in cm.
-#define CAM_HEIGHT 12.7
+#define CAM_HEIGHT 21.8
 /// The angle by which the camera is tilted down in radians.
-#define TILT_ANG M_PI / 13
+#define TILT_ANG 0.2618
 /// The horizontal FOV angle in radians.
 #define HORIZONTAL_FOV 1.1519173061
 
