@@ -1,8 +1,10 @@
+#include <chrono>
 #include <cmath>
 #include <functional>
 #include <iostream>
 #include <optional>
 #include <queue>
+#include <thread>
 
 #include "camera/camera.h"
 #include "camera/find_line.cpp"
@@ -52,7 +54,16 @@ int main() {
   Pose pose = {50, 150, M_PI_2};
   ControllerState controllerState{0};
 
+  long long lastTimeStamp = -1;
+
   while (true) {
+    while (lastFrame.timestamp == lastTimeStamp) {
+      std::this_thread::sleep_for(std::chrono::microseconds(10));
+    }
+    lastTimeStamp = lastFrame.timestamp;
+
+    pose = pose * lastFrame.relativeArduinoPose;
+
     auto poset = optimizePose(findLines(lastFrame), pose);
     if (!poset.has_value()) {
       std::cout << "AW HELL NAW" << std::endl;
@@ -72,6 +83,10 @@ int main() {
     }
     Commands commands = getCommands(pose, waypoints.front(), controllerState);
     sendCommands(commands);
+    queueCapture();
   }
+
+  cleanCamera();
+
   return 0;
 }
