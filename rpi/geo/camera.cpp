@@ -335,7 +335,7 @@ void printCoordinateSystem(const CoordinateSystem &cs) {
   printVector("origin", cs.origin);
 }
 
-int main() {
+int test_main() {
   Pose pose{200, 50, 0.4 + M_PI};
   auto cs = getCameraSystem(pose);
   printCoordinateSystem(cs);

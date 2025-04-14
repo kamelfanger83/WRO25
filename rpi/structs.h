@@ -1,4 +1,5 @@
 #pragma once
+#include <cstdint>
 #include <optional>
 
 struct HSVPixel {
@@ -56,10 +57,9 @@ struct Waypoint {
   double y;
   // double theta; Brauchen wir maybe später
 
-  /// returns if a position has reached the waypoint 
+  /// returns if a position has reached the waypoint
   bool reached(Pose p);
 };
-
 
 /// Represents on a Frame captured by the camera.
 /// angle: angle of the direction of the line. In the range of [0, pi ). For a
