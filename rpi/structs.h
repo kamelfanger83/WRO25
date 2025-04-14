@@ -1,5 +1,15 @@
 #pragma once
+#include <cstdint>
 #include <optional>
+
+struct HSVPixel {
+  uint8_t h, s, v;
+};
+
+struct Frame {
+  HSVPixel *HSV;
+  long long timestamp;
+};
 
 /// Represents either a position in 3D space (Ortsvektor) or just a vector
 /// without or with another intended startpoint.
@@ -46,6 +56,9 @@ struct Waypoint {
   double x;
   double y;
   // double theta; Brauchen wir maybe später
+
+  /// returns if a position has reached the waypoint
+  bool reached(Pose p);
 };
 
 /// Represents on a Frame captured by the camera.

@@ -2,17 +2,10 @@
 
 #include <cstdint>
 
+#include "../structs.h"
+
 #define WIDTH 800
 #define HEIGHT 600
-
-struct HSVPixel {
-  uint8_t h, s, v;
-};
-
-struct Frame {
-  HSVPixel *HSV;
-  long long timestamp;
-};
 
 extern Frame lastFrame;
 
