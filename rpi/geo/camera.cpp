@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <array>
 
 #include "../structs.h"
 #include "../utils.cpp"
@@ -12,6 +13,7 @@
 #include "utils.cpp"
 // We only need this for width and height. Not ideal.
 #include "../camera/camera.h"
+#include "../camera/find_line.cpp"
 
 /// The height of the camera origin above the mat in cm.
 #define CAM_HEIGHT 12.7
@@ -69,6 +71,96 @@ std::optional<ScreenPosition> projectPoint(const CoordinateSystem &cameraSystem,
   return {{x, y}};
 }
 
+
+void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
+  
+  auto camerasys = getCameraSystem(pose);
+  
+  auto checkAndDrawLine = [&](Vector s, Vector e) {
+    bool inRange = false;
+    for (double t = 0; t < 1. + 1e-5; t += 0.05) {
+      Vector v = s * (1. - t) + e * t;
+      if (auto projected = projectPoint(camerasys, v)) {
+        bool ons = projected->x >= 0 && projected->x < WIDTH &&
+            projected->y >= 0 && projected->y < HEIGHT;
+        inRange |= ons;
+        if (ons) {
+          // draw small circle at projected point
+          int x = std::round(projected->x);
+          int y = std::round(projected->y);
+          for (int i = -2; i <= 2; ++i) {
+            for (int j = -2; j <= 2; ++j) {
+              if (i * i + j * j <= 4) {
+                if (x + i >= 0 && x + i < WIDTH && y + j >= 0 &&
+                  y + j < HEIGHT) {
+                    frame.HSV[(y + j) * WIDTH + (x + i)] = color;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    if (!inRange) return;
+    
+    auto  p1 = projectPoint(camerasys, s);
+    auto  p2 = projectPoint(camerasys, e);
+    auto Δx = (*p1).x - (*p2).x;
+    auto Δy = (*p1).y - (*p2).y;
+    
+    double angle = std::atan2(Δy, Δx); // Calculate angle of line
+    if (angle < 0) angle += M_PI;
+    
+    double distanceToOrigin = -std::sin(angle) * (*p1).x + std::cos(angle) * (*p1).y;
+    
+    drawLineInFrame(frame, ScreenLine{angle, distanceToOrigin}, color);
+    return;
+  };
+    
+  auto [s, e] = getStartEndPoints(line);
+  auto  p1 = projectPoint(camerasys, s);
+  auto  p2 = projectPoint(camerasys, e);
+  
+  if (p1.has_value() && p2.has_value()) {
+    checkAndDrawLine(s, e);
+    return;
+  }
+  if (!p1.has_value() && !p2.has_value()) {
+    //std::cerr << "None of the two points is on the screen.";
+    return;
+  }
+  if (p2.has_value()) {
+    std::swap(p1, p2);
+    std::swap(s, e);
+  }
+
+  // p1 is in the screen and p2 out.
+  // s is in the screen and e out.
+  Vector v{s.x - e.x, s.y - e.y, s.z - e.z};
+  e = e + v * (( camerasys.z * camerasys.origin - camerasys.z * e) / (v * camerasys.z) + 1 / std::sqrt(v * v) );
+  checkAndDrawLine(s, e);
+  
+}
+
+void drawProjectedLines(Frame &frame, Pose &pose){
+  
+  std::vector<std::pair<std::array<Line, 4>, HSVPixel>> linesColors
+              {{outerLines, {180, 255, 30}},
+              {innerLines, {180, 255, 255}},
+              {blueLines, {180, 255, 255}},
+              {orangeLines, {0, 255, 255}}};
+  
+  for (auto [lines, color] : linesColors){
+    for (auto line : lines){
+      drawProjectedLine(frame, pose, line, color);
+    }
+  }
+}
+
+
+
+
 /// Returns two arbitrary points on a given ScreenLine.
 std::pair<ScreenPosition, ScreenPosition>
 pointsOnLine(const ScreenLine &screenLine) {
@@ -121,7 +213,7 @@ double loss(const std::pair<ScreenLine, Vector> &constraint,
 /// on the screen.
 std::optional<Line> matchBoardLine(const ScreenLine &screenLine,
                                    const Pose &posePreviousFrame,
-                                   Line candidates[4]) {
+                                   std::array<Line, 4> candidates) {
   CoordinateSystem cameraSystemPreviousFrame =
       getCameraSystem(posePreviousFrame);
   Line bestCandidate = Line::INVALID;
@@ -161,7 +253,7 @@ getConstraints(const ScreenLineSet &screenLines,
                const Pose &posePreviousFrame) {
   std::vector<std::pair<ScreenLine, Vector>> constraints;
   auto matchAddConstraints = [&](const std::optional<ScreenLine> &screenLineOpt,
-                                 Line candidates[4]) {
+                                 std::array<Line, 4> candidates) {
     if (!screenLineOpt.has_value())
       return;
     ScreenLine screenLine = *screenLineOpt;
@@ -214,7 +306,6 @@ std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
   const float learningRate = 0.01;
   for (int epoch = 0; epoch < 1000; ++epoch) {
     Pose adjustment{0, 0, 0};
-    int i = 0;
     for (auto constraint : constraints) {
       adjustment = adjustment + getGrad(constraint, pose);
     }
@@ -256,14 +347,18 @@ int main() {
               << ", y = " << projected->y << std::endl;
   ScreenLineSet screenLines{{}, {}, {}, ScreenLine{0.1, 200}, {}};
   ScreenLine screenLine = *screenLines.back;
-  auto match = matchBoardLine(screenLine, pose, outerLines);
-  if (match.has_value())
-    std::cout << "We found a match: " << *match << std::endl;
-  else
-    std::cout << "No match was found" << std::endl;
   auto optPose = *optimizePose(screenLines, pose);
   auto plane = planeFromLine(screenLine, getCameraSystem(optPose));
   // printPlaneToBlenderScript(plane);
   std::cout << "d = " << plane.d << std::endl;
   printVector("normal", plane.normal);
+
+  initializeCamera();
+
+  drawProjectedLines(lastFrame, pose);
+  saveFrame(lastFrame);
+
+  cleanCamera();
+
+
 }

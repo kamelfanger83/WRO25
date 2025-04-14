@@ -2,7 +2,7 @@
 
 #include "../structs.h"
 
-enum Line {
+enum class Line {
     //outer walls
     BORDER_OUT_1, BORDER_OUT_2, BORDER_OUT_3, BORDER_OUT_4,
     //inner walls
@@ -16,10 +16,10 @@ enum Line {
 
 
 /// 4 arrays with all the important lines
-Line outerLines[4] = {Line::BORDER_OUT_1, Line::BORDER_OUT_2, Line::BORDER_OUT_3, Line::BORDER_OUT_4};
-Line innerLines[4] = {Line::BORDER_IN_1, Line::BORDER_IN_2, Line::BORDER_IN_3, Line::BORDER_IN_4};
-Line orangeLines[4] = {Line::ORANGE_1, Line::ORANGE_2, Line::ORANGE_3, Line::ORANGE_4};
-Line blueLines[4] = {Line::BLUE_1, Line::BLUE_2, Line::BLUE_3, Line::BLUE_4};
+std::array<Line, 4> outerLines = {Line::BORDER_OUT_1, Line::BORDER_OUT_2, Line::BORDER_OUT_3, Line::BORDER_OUT_4};
+std::array<Line, 4> innerLines = {Line::BORDER_IN_1, Line::BORDER_IN_2, Line::BORDER_IN_3, Line::BORDER_IN_4};
+std::array<Line, 4> orangeLines = {Line::ORANGE_1, Line::ORANGE_2, Line::ORANGE_3, Line::ORANGE_4};
+std::array<Line, 4> blueLines = {Line::BLUE_1, Line::BLUE_2, Line::BLUE_3, Line::BLUE_4};
 
 /// function that takes a line and returns the start and end Cordinates of said line
 std::pair<Vector, Vector> getStartEndPoints(Line line) {
