@@ -36,11 +36,13 @@ else()
     message(STATUS "Not running on Raspberry Pi, libcamera will not be used.")
 endif()
 
-# Add the executable
 add_executable(camera_test camera/test.cpp camera/camera.cpp)
+add_executable(main main.cpp camera/camera.cpp)
 
 # Link to libcamera if available
 if(WITH_LIBCAMERA)
     target_compile_definitions(camera_test PRIVATE USE_LIBCAMERA)
     target_link_libraries(camera_test PkgConfig::LIBCAMERA)
+    target_compile_definitions(main PRIVATE USE_LIBCAMERA)
+    target_link_libraries(main PkgConfig::LIBCAMERA)
 endif()

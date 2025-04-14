@@ -1,11 +1,11 @@
 #include <cmath>
+#include <array>
 #include <iomanip>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
-#include <array>
 
 #include "../structs.h"
 #include "../utils.cpp"
@@ -71,18 +71,17 @@ std::optional<ScreenPosition> projectPoint(const CoordinateSystem &cameraSystem,
   return {{x, y}};
 }
 
+void drawProjectedLine(Frame &frame, Pose &pose, Line line, HSVPixel color) {
 
-void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
-  
   auto camerasys = getCameraSystem(pose);
-  
+
   auto checkAndDrawLine = [&](Vector s, Vector e) {
     bool inRange = false;
     for (double t = 0; t < 1. + 1e-5; t += 0.05) {
       Vector v = s * (1. - t) + e * t;
       if (auto projected = projectPoint(camerasys, v)) {
         bool ons = projected->x >= 0 && projected->x < WIDTH &&
-            projected->y >= 0 && projected->y < HEIGHT;
+                   projected->y >= 0 && projected->y < HEIGHT;
         inRange |= ons;
         if (ons) {
           // draw small circle at projected point
@@ -92,8 +91,8 @@ void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
             for (int j = -2; j <= 2; ++j) {
               if (i * i + j * j <= 4) {
                 if (x + i >= 0 && x + i < WIDTH && y + j >= 0 &&
-                  y + j < HEIGHT) {
-                    frame.HSV[(y + j) * WIDTH + (x + i)] = color;
+                    y + j < HEIGHT) {
+                  frame.HSV[(y + j) * WIDTH + (x + i)] = color;
                 }
               }
             }
@@ -101,33 +100,36 @@ void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
         }
       }
     }
-    
-    if (!inRange) return;
-    
-    auto  p1 = projectPoint(camerasys, s);
-    auto  p2 = projectPoint(camerasys, e);
+
+    if (!inRange)
+      return;
+
+    auto p1 = projectPoint(camerasys, s);
+    auto p2 = projectPoint(camerasys, e);
     auto Δx = (*p1).x - (*p2).x;
     auto Δy = (*p1).y - (*p2).y;
-    
+
     double angle = std::atan2(Δy, Δx); // Calculate angle of line
-    if (angle < 0) angle += M_PI;
-    
-    double distanceToOrigin = -std::sin(angle) * (*p1).x + std::cos(angle) * (*p1).y;
-    
+    if (angle < 0)
+      angle += M_PI;
+
+    double distanceToOrigin =
+        -std::sin(angle) * (*p1).x + std::cos(angle) * (*p1).y;
+
     drawLineInFrame(frame, ScreenLine{angle, distanceToOrigin}, color);
     return;
   };
-    
+
   auto [s, e] = getStartEndPoints(line);
-  auto  p1 = projectPoint(camerasys, s);
-  auto  p2 = projectPoint(camerasys, e);
-  
+  auto p1 = projectPoint(camerasys, s);
+  auto p2 = projectPoint(camerasys, e);
+
   if (p1.has_value() && p2.has_value()) {
     checkAndDrawLine(s, e);
     return;
   }
   if (!p1.has_value() && !p2.has_value()) {
-    //std::cerr << "None of the two points is on the screen.";
+    // std::cerr << "None of the two points is on the screen.";
     return;
   }
   if (p2.has_value()) {
@@ -138,28 +140,26 @@ void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
   // p1 is in the screen and p2 out.
   // s is in the screen and e out.
   Vector v{s.x - e.x, s.y - e.y, s.z - e.z};
-  e = e + v * (( camerasys.z * camerasys.origin - camerasys.z * e) / (v * camerasys.z) + 1 / std::sqrt(v * v) );
+  e = e + v * ((camerasys.z * camerasys.origin - camerasys.z * e) /
+                   (v * camerasys.z) +
+               1 / std::sqrt(v * v));
   checkAndDrawLine(s, e);
-  
 }
 
-void drawProjectedLines(Frame &frame, Pose &pose){
-  
-  std::vector<std::pair<std::array<Line, 4>, HSVPixel>> linesColors
-              {{outerLines, {180, 255, 30}},
-              {innerLines, {180, 255, 255}},
-              {blueLines, {180, 255, 255}},
-              {orangeLines, {0, 255, 255}}};
-  
-  for (auto [lines, color] : linesColors){
-    for (auto line : lines){
+void drawProjectedLines(Frame &frame, Pose &pose) {
+
+  std::vector<std::pair<std::array<Line, 4>, HSVPixel>> linesColors{
+      {outerLines, {180, 255, 30}},
+      {innerLines, {180, 255, 255}},
+      {blueLines, {180, 255, 255}},
+      {orangeLines, {0, 255, 255}}};
+
+  for (auto [lines, color] : linesColors) {
+    for (auto line : lines) {
       drawProjectedLine(frame, pose, line, color);
     }
   }
 }
-
-
-
 
 /// Returns two arbitrary points on a given ScreenLine.
 std::pair<ScreenPosition, ScreenPosition>
@@ -360,5 +360,5 @@ int test_main() {
 
   cleanCamera();
 
-
+  return 0;
 }
