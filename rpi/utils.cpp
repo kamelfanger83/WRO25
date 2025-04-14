@@ -32,3 +32,17 @@ bool Waypoint::reached(Pose pose) {
   }
   return false;
 }
+
+Pose Pose::operator/(const Pose &o) const {
+  float mx = this->x - o.x;
+  float my = this->y - o.y;
+  float rotx = mx * std::cos(-o.theta) - my * std::sin(-o.theta);
+  float roty = mx * std::sin(-o.theta) + my * std::cos(-o.theta);
+  return {rotx, roty, this->theta - o.theta};
+}
+
+Pose Pose::operator*(const Pose &o) const {
+  float rotx = o.x * std::cos(this->theta) - o.y * std::sin(this->theta);
+  float roty = o.x * std::sin(this->theta) + o.y * std::cos(this->theta);
+  return {this->x + rotx, this->y + roty, this->theta + o.theta};
+}

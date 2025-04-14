@@ -41,7 +41,7 @@ add_executable(camera_capture test.cpp camera.cpp)
 
 # Link to libcamera if available
 if(WITH_LIBCAMERA)
-    target_link_libraries(camera_capture PkgConfig::LIBCAMERA)
+    target_link_libraries(camera_capture PkgConfig::LIBCAMERA PRIVATE USE_LIBCAMERA)
 else()
-    target_compile_definitions(camera_capture PRIVATE NO_LIBCAMERA)
+    target_compile_definitions(camera_capture)
 endif()

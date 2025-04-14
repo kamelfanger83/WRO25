@@ -13,6 +13,8 @@ const float wheelDiam = 5.3;
 volatile unsigned long pulses = 0;
 unsigned long lastUpdatePulses = 0;
 
+unsigned long lastPosePrint = 0;
+
 void registerPulse () {
   ++pulses;
 }
@@ -108,5 +110,14 @@ void loop() {
   x += (xCp - xC) * sin(theta) + (yCp - yC) * cos(theta);
   y += -(xCp - xC) * cos(theta) + (yCp - yC) * sin(theta);
   theta += dTheta;
-
+  if (micros() > lastPosePrint + 5000) {
+    Serial.print("[x=");
+    Serial.print(x);
+    Serial.print(",y=");
+    Serial.print(y);
+    Serial.print(",t=");
+    Serial.print(theta);
+    Serial.println("]");
+    lastPosePrint = micros();
+  }
 }

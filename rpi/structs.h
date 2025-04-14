@@ -2,15 +2,6 @@
 #include <cstdint>
 #include <optional>
 
-struct HSVPixel {
-  uint8_t h, s, v;
-};
-
-struct Frame {
-  HSVPixel *HSV;
-  long long timestamp;
-};
-
 /// Represents either a position in 3D space (Ortsvektor) or just a vector
 /// without or with another intended startpoint.
 struct Vector {
@@ -49,6 +40,9 @@ struct Pose {
 
   Pose operator+(const Pose &o) const;
   Pose operator*(double f) const;
+
+  Pose operator/(const Pose &o) const;
+  Pose operator*(const Pose &o) const;
 };
 
 /// Represents a point on that field that is scheduled to be visited.
@@ -59,6 +53,16 @@ struct Waypoint {
 
   /// returns if a position has reached the waypoint
   bool reached(Pose p);
+};
+
+struct HSVPixel {
+  uint8_t h, s, v;
+};
+
+struct Frame {
+  HSVPixel *HSV;
+  long long timestamp;
+  Pose relativeArduinoPose;
 };
 
 /// Represents on a Frame captured by the camera.

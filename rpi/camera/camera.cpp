@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdint>
 
+#include "../structs.h"
 #include "camera.h"
 
 HSVPixel rgbToHsv(uint8_t r, uint8_t g, uint8_t b) {
@@ -25,9 +26,9 @@ HSVPixel rgbToHsv(uint8_t r, uint8_t g, uint8_t b) {
   return HSVPixel{h, s, v};
 }
 
-Frame lastFrame{new HSVPixel[WIDTH * HEIGHT * 3], -1};
+Frame lastFrame{new HSVPixel[WIDTH * HEIGHT * 3], -1, {0, 0, 0}};
 
-#ifdef NO_LIBCAMERA
+#ifndef USE_LIBCAMERA
 
 #include <cassert>
 #include <filesystem>
@@ -79,6 +80,9 @@ void cleanCamera() { delete[] lastFrame.HSV; }
 
 #include <libcamera/libcamera.h>
 
+#include "../serial.cpp"
+#include "../utils.cpp"
+
 using namespace libcamera;
 static std::shared_ptr<Camera> camera;
 
@@ -87,7 +91,15 @@ std::unique_ptr<Request> request;
 FrameBufferAllocator *allocator;
 std::unique_ptr<CameraManager> cm;
 
+Pose lastArduinoPose{0, 0, 0};
+
 static void requestComplete(Request *request) {
+
+  processArduinoResponse();
+
+  lastFrame.relativeArduinoPose = arduinoPose / lastArduinoPose;
+  lastArduinoPose = arduinoPose;
+
   std::cout << std::endl
             << "Request completed: " << request->toString() << std::endl;
 
