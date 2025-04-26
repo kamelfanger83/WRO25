@@ -1,5 +1,8 @@
 # WRO Code TODO
 
+## Journal
+https://hedgedoc.timon.ch/P4v4aR35QGK7QTs8tbAWeA
+
 ## Localization
 
 Mir wennd üsi position based on 5 linie bestimme: grenze usse, grenze inne, grenze hinne, orangi und blaui linie. Das heisst schritt 1 isch die linie relyably chönne erkenne:
