@@ -17,7 +17,7 @@
 /// Assumptions: The points outside the field are ment to be already filtered
 /// out.
 std::optional<ScreenLine> findLine(std::vector<Point> points) {
-  if (points.size() < 10) {
+  if (points.size() < 100) {
     std::cerr << "Insufficient points to find a line." << std::endl;
     return {};
   }
@@ -187,11 +187,11 @@ BorderPointPartition findBorderPoints(const Frame &frame) {
       Point p{x, y};
       if (isBorderPoint(frame, p)) {
         double gradAngle = directionOfGradientAtPoint(p, frame);
-        if (M_PI_4 <= gradAngle && gradAngle < 3 * M_PI_4)
+        if (1.5 * M_PI_4 <= gradAngle && gradAngle < 3 * M_PI_4)
           result.back.push_back(p);
-        else if (-M_PI_4 <= gradAngle && gradAngle < M_PI_4)
+        else if (-M_PI_4 <= gradAngle && gradAngle < 1.5 * M_PI_4)
           result.left.push_back(p);
-        else if (3 * M_PI_4 <= gradAngle || gradAngle < -3 * M_PI_4)
+        else if (/* 3 * M_PI_4 <= gradAngle || */ gradAngle < -3 * M_PI_4)
           result.right.push_back(p);
       }
     }
@@ -239,4 +239,28 @@ ScreenLineSet findLines(Frame &frame) {
   lines.orange = findLine(orangePoints);
 
   return lines;
+}
+
+void drawScreenLineSet(Frame &frame, ScreenLineSet lines) {
+
+  if (lines.left.has_value())
+    drawLineInFrame(frame, *lines.left, {212, 255, 255});
+  else
+    std::cerr << "Unfortunately, there was no left line." << std::endl;
+  if (lines.back.has_value())
+    drawLineInFrame(frame, *lines.back, {43, 255, 255});
+  else
+    std::cerr << "Unfortunately, there was no back line." << std::endl;
+  if (lines.right.has_value())
+    drawLineInFrame(frame, *lines.right, {85, 255, 255});
+  else
+    std::cerr << "Unfortunately, there was no right line." << std::endl;
+  if (lines.orange.has_value())
+    drawLineInFrame(frame, *lines.orange, {127, 255, 255});
+  else
+    std::cerr << "Unfortunately, there was no orange line." << std::endl;
+  if (lines.blue.has_value())
+    drawLineInFrame(frame, *lines.blue, {0, 255, 255});
+  else
+    std::cerr << "Unfortunately, there was no blue line." << std::endl;
 }

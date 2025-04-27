@@ -36,8 +36,8 @@ else()
     message(STATUS "Not running on Raspberry Pi, libcamera will not be used.")
 endif()
 
-add_executable(camera_test camera/test.cpp camera/camera.cpp)
-add_executable(main main.cpp camera/camera.cpp)
+add_executable(camera_test test.cpp camera/camera.cpp geo/constants.cpp)
+add_executable(main main.cpp camera/camera.cpp geo/constants.cpp)
 
 # Link to libcamera if available
 if(WITH_LIBCAMERA)

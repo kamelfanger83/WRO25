@@ -4,9 +4,6 @@
 
 #include "../structs.h"
 
-#define WIDTH 800
-#define HEIGHT 600
-
 extern Frame lastFrame;
 
 /// Sets up the camera to start capturing frames, also queues first frame to be
@@ -18,3 +15,6 @@ void queueCapture();
 
 /// Frees all resources allocated when initializing the camera.
 void cleanCamera();
+
+/// Returns a separate copy of a frame;
+Frame cloneFrame(const Frame &);

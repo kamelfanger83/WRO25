@@ -40,33 +40,39 @@ void colorColor(Frame &frame, std::vector<Point> points,
   }
 }
 
-/// Gradient function. Takes a frame and a point and returns the direction of
-/// the gradient at that point. Using the Sobel Algorithm.
+/// Gradient function using 5x5 Sobel kernel. Takes a frame and a point and
+/// returns the direction of the gradient at that point.
 double directionOfGradientAtPoint(Point x0, const Frame &frame) {
   int x = x0.x;
   int y = x0.y;
 
-  assert(x >= 1 && x < WIDTH - 1);
-  assert(y >= 1 && y < HEIGHT - 1);
+  assert(x >= 2 && x < WIDTH - 2);
+  assert(y >= 2 && y < HEIGHT - 2);
 
-  // Sobel Kernels
-  int Gx[3][3] = {{-1, 0, 1}, {-2, 0, 2}, {-1, 0, 1}};
+  // 5x5 Sobel Kernels
+  int Gx[5][5] = {{-1, -2, 0, 2, 1},
+                  {-4, -8, 0, 8, 4},
+                  {-6, -12, 0, 12, 6},
+                  {-4, -8, 0, 8, 4},
+                  {-1, -2, 0, 2, 1}};
 
-  int Gy[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
+  int Gy[5][5] = {{-1, -4, -6, -4, -1},
+                  {-2, -8, -12, -8, -2},
+                  {0, 0, 0, 0, 0},
+                  {2, 8, 12, 8, 2},
+                  {1, 4, 6, 4, 1}};
 
   double gx = 0, gy = 0;
 
-  // Apply Sobel filter
-  for (int i = -1; i <= 1; ++i) {
-    for (int j = -1; j <= 1; ++j) {
+  // Apply 5x5 Sobel filter
+  for (int i = -2; i <= 2; ++i) {
+    for (int j = -2; j <= 2; ++j) {
       HSVPixel pixel = frame.HSV[(y + i) * WIDTH + (x + j)];
 
-      // This is only an approximation but it should be fine
       double greyscale = double(pixel.v) / 255.;
 
-      // Convolve with Sobel kernels
-      gx += greyscale * Gx[i + 1][j + 1];
-      gy += greyscale * Gy[i + 1][j + 1];
+      gx += greyscale * Gx[i + 2][j + 2];
+      gy += greyscale * Gy[i + 2][j + 2];
     }
   }
 
@@ -98,23 +104,23 @@ bool isColor(const HSVPixel pixel) {
 }
 
 bool isBlue(const HSVPixel pixel) {
-  return int(210 / 360. * 255) <= pixel.h && pixel.h <= int(260 / 360. * 255) &&
+  return int(215 / 360. * 255) <= pixel.h && pixel.h <= int(260 / 360. * 255) &&
          isColor(pixel);
 }
 
 bool isOrange(const HSVPixel pixel) {
-  return int(18 / 360. * 255) <= pixel.h && pixel.h <= int(35 / 360. * 255) &&
+  return int(10 / 360. * 255) <= pixel.h && pixel.h <= int(35 / 360. * 255) &&
          isColor(pixel);
 }
 
 bool isBlack(const HSVPixel pixel) {
   // return pixel.v < int(0.2 * 255);
-  return int(190 / 360. * 255) <= pixel.h && pixel.h <= int(205 / 360. * 255) &&
+  return int(190 / 360. * 255) <= pixel.h && pixel.h <= int(215 / 360. * 255) &&
          isColor(pixel);
 }
 
 bool isWhite(const HSVPixel pixel) {
-  return pixel.s < int(0.15 * 255) && pixel.v > int(0.75 * 255);
+  return pixel.s < int(0.15 * 255) && pixel.v > int(0.5 * 255);
 }
 
 bool isGreen(const HSVPixel pixel) {
@@ -159,5 +165,5 @@ bool isBorderPoint(const Frame &frame, const Point point) {
     }
   }
 
-  return (whitePointCounter >= 7) && (blackPointCounter >= 7);
+  return (whitePointCounter >= 5) && (blackPointCounter >= 5);
 }

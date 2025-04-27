@@ -1,8 +1,11 @@
+#pragma once
+
 #include <cassert>
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
 #include <iostream>
+#include <optional>
 #include <regex>
 #include <termios.h>
 #include <unistd.h>
@@ -66,25 +69,26 @@ int initializeSerial() {
   return 0;
 }
 
-Pose arduinoPose{0, 0, 0};
-
 /// Reads data sent from Arduino and prints it to stdout. Additionally looks for
 /// poses reported by the Arduino and updates arduinoPose.
-int processArduinoResponse() {
-  char buf[256];
+std::optional<Pose> processArduinoResponse() {
+  char buf[2048];
   int n = read(serial_port, buf, sizeof(buf) - 1);
 
   if (n < 0) {
     if (errno == EAGAIN || errno == EWOULDBLOCK) {
       // No data available right now; return without printing.
-      return 0;
+      return {};
     }
     std::cerr << "Error reading from the serial port." << std::endl;
-    return n;
+    return {};
   } else if (n > 0) {
 
     buf[n] = '\0'; // Null-terminate the received data
     std::string buffer = std::string(buf);
+
+    std::cout << "[ARDUINO]: " << buffer;
+
     std::string latestPacket;
 
     // Regex to find all matching [x=...,y=...,t=...] patterns
@@ -104,13 +108,13 @@ int processArduinoResponse() {
         float y = std::stof(values[2]);
         float theta = std::stof(values[3]);
 
-        arduinoPose = {x, y, theta};
+        return {{x, y, theta}};
       }
+    } else {
+      return {};
     }
-
-    std::cout << "[ARDUINO]: " << buffer;
   }
-  return 0;
+  return {};
 }
 
 /// Sends updates to servo angle and motor speed to the Arduino.

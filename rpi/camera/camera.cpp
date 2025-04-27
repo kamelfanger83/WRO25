@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdint>
+#include <cstring>
 
 #include "../structs.h"
 #include "camera.h"
@@ -26,7 +27,13 @@ HSVPixel rgbToHsv(uint8_t r, uint8_t g, uint8_t b) {
   return HSVPixel{h, s, v};
 }
 
-Frame lastFrame{new HSVPixel[WIDTH * HEIGHT * 3], -1, {0, 0, 0}};
+Frame lastFrame{new HSVPixel[WIDTH * HEIGHT * 3], -1};
+
+Frame cloneFrame(const Frame &frame) {
+  auto hsv = new HSVPixel[WIDTH * HEIGHT * 3];
+  std::memcpy(hsv, frame.HSV, WIDTH * HEIGHT * 3);
+  return {hsv, frame.timestamp};
+}
 
 #ifndef USE_LIBCAMERA
 
@@ -80,34 +87,22 @@ void cleanCamera() { delete[] lastFrame.HSV; }
 
 #include <libcamera/libcamera.h>
 
-#include "../serial.cpp"
-#include "../utils.cpp"
+static std::shared_ptr<libcamera::Camera> camera;
 
-using namespace libcamera;
-static std::shared_ptr<Camera> camera;
+libcamera::Stream *stream;
+std::unique_ptr<libcamera::Request> request;
+libcamera::FrameBufferAllocator *allocator;
+std::unique_ptr<libcamera::CameraManager> cm;
 
-Stream *stream;
-std::unique_ptr<Request> request;
-FrameBufferAllocator *allocator;
-std::unique_ptr<CameraManager> cm;
-
-Pose lastArduinoPose{0, 0, 0};
-
-static void requestComplete(Request *request) {
-
-  processArduinoResponse();
-
-  lastFrame.relativeArduinoPose = arduinoPose / lastArduinoPose;
-  lastArduinoPose = arduinoPose;
-
+static void requestComplete(libcamera::Request *request) {
   std::cout << std::endl
             << "Request completed: " << request->toString() << std::endl;
 
-  FrameBuffer *buffer = request->findBuffer(stream);
-  const FrameMetadata &metadata = buffer->metadata();
+  libcamera::FrameBuffer *buffer = request->findBuffer(stream);
+  const libcamera::FrameMetadata &metadata = buffer->metadata();
 
   unsigned int nplane = 0;
-  for (const FrameMetadata::Plane &plane : metadata.planes()) {
+  for (const libcamera::FrameMetadata::Plane &plane : metadata.planes()) {
     std::cout << plane.bytesused;
     if (++nplane < metadata.planes().size())
       std::cout << "/";
@@ -132,12 +127,12 @@ static void requestComplete(Request *request) {
 
 void queueCapture() {
   /* Re-queue the Request to the camera. */
-  request->reuse(Request::ReuseBuffers);
+  request->reuse(libcamera::Request::ReuseBuffers);
   camera->queueRequest(request.get());
 }
 
 void initializeCamera() {
-  cm = std::make_unique<CameraManager>();
+  cm = std::make_unique<libcamera::CameraManager>();
   cm->start();
 
   std::string cameraId = cm->cameras()[0]->id();
@@ -147,14 +142,17 @@ void initializeCamera() {
   camera->acquire();
 
   // Create configuration
-  std::unique_ptr<CameraConfiguration> config =
-      camera->generateConfiguration({StreamRole::Viewfinder});
+  std::unique_ptr<libcamera::CameraConfiguration> config =
+      camera->generateConfiguration({libcamera::StreamRole::VideoRecording});
 
-  StreamConfiguration &streamConfig = config->at(0);
+  libcamera::StreamConfiguration &streamConfig = config->at(0);
   std::cout << "Default viewfinder configuration is: "
             << streamConfig.toString() << std::endl;
 
-  // streamConfig.pixelFormat = libcamera::formats::YUV420;
+  streamConfig.pixelFormat = libcamera::formats::XRGB8888;
+
+  streamConfig.size.width = WIDTH;
+  streamConfig.size.height = HEIGHT;
 
   config->validate();
   std::cout << "Validated viewfinder configuration is: "
@@ -162,9 +160,9 @@ void initializeCamera() {
 
   camera->configure(config.get());
 
-  allocator = new FrameBufferAllocator(camera);
+  allocator = new libcamera::FrameBufferAllocator(camera);
 
-  for (StreamConfiguration &cfg : *config) {
+  for (libcamera::StreamConfiguration &cfg : *config) {
     int ret = allocator->allocate(cfg.stream());
     if (ret < 0) {
       std::cerr << "Can't allocate buffers" << std::endl;
@@ -177,7 +175,7 @@ void initializeCamera() {
   }
 
   stream = streamConfig.stream();
-  const std::vector<std::unique_ptr<FrameBuffer>> &buffers =
+  const std::vector<std::unique_ptr<libcamera::FrameBuffer>> &buffers =
       allocator->buffers(stream);
 
   request = camera->createRequest();
@@ -186,7 +184,7 @@ void initializeCamera() {
     return;
   }
 
-  const std::unique_ptr<FrameBuffer> &buffer = buffers[0];
+  const std::unique_ptr<libcamera::FrameBuffer> &buffer = buffers[0];
   std::cout << "Buffer with " << buffer->planes().size() << " planes"
             << std::endl;
   for (size_t i = 0; i < buffer->planes().size(); i++) {
@@ -202,8 +200,8 @@ void initializeCamera() {
   /*
    * Controls can be added to a request on a per frame basis.
    */
-  // ControlList &controls = request->controls();
-  // controls.set(controls::Brightness, 0.5);
+  // libcamera::ControlList &controls = request->controls();
+  // controls.set(libcamera::controls::Brightness, 0.5);
 
   camera->requestCompleted.connect(requestComplete);
 
@@ -223,4 +221,5 @@ void cleanCamera() {
 
   return;
 }
+
 #endif

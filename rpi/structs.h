@@ -2,6 +2,11 @@
 #include <cstdint>
 #include <optional>
 
+// #define WIDTH 1280
+// #define HEIGHT 720
+#define WIDTH 1920
+#define HEIGHT 1080
+
 /// Represents either a position in 3D space (Ortsvektor) or just a vector
 /// without or with another intended startpoint.
 struct Vector {
@@ -62,7 +67,6 @@ struct HSVPixel {
 struct Frame {
   HSVPixel *HSV;
   long long timestamp;
-  Pose relativeArduinoPose;
 };
 
 /// Represents on a Frame captured by the camera.
