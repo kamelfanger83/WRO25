@@ -1,10 +1,13 @@
+#include <chrono>
 #include <cmath>
 #include <functional>
 #include <iostream>
 #include <optional>
 #include <queue>
+#include <thread>
 
 #include "camera/camera.h"
+#include "camera/find_color.cpp"
 #include "camera/find_line.cpp"
 #include "geo/camera.cpp"
 #include "getCommands/getCommands.cpp"
@@ -50,15 +53,37 @@ int main() {
   std::queue<Waypoint> waypoints;
   Mode nextMode = {startMode};
   Pose pose = {50, 150, M_PI_2};
+  Pose lastArduinoPose = {0, 0, 0};
   ControllerState controllerState{0};
 
+  // long long lastTimeStamp = -1;
+
   while (true) {
-    auto poset = optimizePose(findLines(lastFrame), pose);
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
+    /* while (lastFrame.timestamp == lastTimeStamp) {
+      std::this_thread::sleep_for(std::chrono::microseconds(10));
+    }
+    lastTimeStamp = lastFrame.timestamp; */
+
+    auto arduinoPose = processArduinoResponse();
+    if (arduinoPose.has_value()) {
+      pose = pose * (*arduinoPose / lastArduinoPose);
+      lastArduinoPose = *arduinoPose;
+    }
+
+    std::cout << "Pre visual pose:\n";
+    printPose(pose);
+
+    /* auto poset = optimizePose(findLines(lastFrame), pose);
     if (!poset.has_value()) {
       std::cout << "AW HELL NAW" << std::endl;
       break;
     }
-    pose = *poset;
+    pose = *poset; */
+
+    // std::cout << "Post visual pose:\n";
+    // printPose(pose);
+
     if (waypoints.front().reached(pose)) {
       waypoints.pop();
     }
@@ -72,6 +97,12 @@ int main() {
     }
     Commands commands = getCommands(pose, waypoints.front(), controllerState);
     sendCommands(commands);
+    // drawProjectedLines(lastFrame, pose);
+    // saveFrame(lastFrame);
+    // queueCapture();
   }
+
+  cleanCamera();
+
   return 0;
 }

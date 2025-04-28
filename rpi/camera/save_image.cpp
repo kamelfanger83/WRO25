@@ -74,7 +74,7 @@ void saveFrame(const Frame &frame) {
   std::string source_path =
       std::filesystem::canonical(__FILE__).parent_path().string();
   std::string output_path =
-      source_path + "/" + std::to_string(frame.timestamp) + ".png";
+      /* source_path + "/" + */ std::to_string(frame.timestamp) + ".png";
 
   // Save the image as PNG
   saveImage(rgb_data, WIDTH, HEIGHT, output_path.c_str());

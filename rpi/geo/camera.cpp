@@ -1,3 +1,4 @@
+#include <array>
 #include <cmath>
 #include <iomanip>
 #include <iostream>
@@ -5,22 +6,13 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <array>
 
+#include "../camera/find_line.cpp"
 #include "../structs.h"
 #include "../utils.cpp"
+#include "constants.h"
 #include "coordinates.cpp"
 #include "utils.cpp"
-// We only need this for width and height. Not ideal.
-#include "../camera/camera.h"
-#include "../camera/find_line.cpp"
-
-/// The height of the camera origin above the mat in cm.
-#define CAM_HEIGHT 12.7
-/// The angle by which the camera is tilted down in radians.
-#define TILT_ANG M_PI / 13
-/// The horizontal FOV angle in radians.
-#define HORIZONTAL_FOV 1.1519173061
 
 /// Describes another coordinate system relative to the standard coordinate
 /// system. x, y, z form an orthonormal basis and point in the positive x, y, z
@@ -31,13 +23,31 @@ struct CoordinateSystem {
   Vector x, y, z, origin;
 };
 
+/// Rotates v around axis by given angle in radians counterclockwise.
+Vector rotateAroundAxis(const Vector &v, const Vector &axis,
+                        double angleRadians) {
+  Vector k = normalize(axis);
+  double cosTheta = std::cos(angleRadians);
+  double sinTheta = std::sin(angleRadians);
+
+  Vector term1 = v * cosTheta;
+  Vector term2 = cross(k, v) * sinTheta;
+  Vector term3 = k * (k * v) * (1 - cosTheta);
+
+  return term1 + term2 + term3;
+}
+
 CoordinateSystem getCameraSystem(const Pose &pose) {
-  Vector x{std::cos(pose.theta - M_PI_2f64), std::sin(pose.theta - M_PI_2f64),
-           0};
-  Vector y{-std::sin(TILT_ANG) * std::cos(pose.theta),
-           -std::sin(TILT_ANG) * std::sin(pose.theta), -std::cos(TILT_ANG)};
-  Vector z{std::cos(TILT_ANG) * std::cos(pose.theta),
-           std::cos(TILT_ANG) * std::sin(pose.theta), -std::sin(TILT_ANG)};
+  Vector x{std::cos(pose.theta + THETA_OFFSET - M_PI_2f64),
+           std::sin(pose.theta + THETA_OFFSET - M_PI_2f64), 0};
+  Vector y{-std::sin(TILT_ANG) * std::cos(pose.theta + THETA_OFFSET),
+           -std::sin(TILT_ANG) * std::sin(pose.theta + THETA_OFFSET),
+           -std::cos(TILT_ANG)};
+  Vector z{std::cos(TILT_ANG) * std::cos(pose.theta + THETA_OFFSET),
+           std::cos(TILT_ANG) * std::sin(pose.theta + THETA_OFFSET),
+           -std::sin(TILT_ANG)};
+  x = rotateAroundAxis(x, z, -CAMERA_TWIST);
+  y = rotateAroundAxis(y, z, -CAMERA_TWIST);
   Vector origin{pose.x, pose.y, CAM_HEIGHT};
   return {x, y, z, origin};
 }
@@ -71,18 +81,18 @@ std::optional<ScreenPosition> projectPoint(const CoordinateSystem &cameraSystem,
   return {{x, y}};
 }
 
+void drawProjectedLine(Frame &frame, Pose &pose, Line line, HSVPixel color) {
 
-void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
-  
   auto camerasys = getCameraSystem(pose);
-  
+
   auto checkAndDrawLine = [&](Vector s, Vector e) {
     bool inRange = false;
-    for (double t = 0; t < 1. + 1e-5; t += 0.05) {
+    auto se = e - s;
+    for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
       Vector v = s * (1. - t) + e * t;
       if (auto projected = projectPoint(camerasys, v)) {
         bool ons = projected->x >= 0 && projected->x < WIDTH &&
-            projected->y >= 0 && projected->y < HEIGHT;
+                   projected->y >= 0 && projected->y < HEIGHT;
         inRange |= ons;
         if (ons) {
           // draw small circle at projected point
@@ -92,8 +102,8 @@ void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
             for (int j = -2; j <= 2; ++j) {
               if (i * i + j * j <= 4) {
                 if (x + i >= 0 && x + i < WIDTH && y + j >= 0 &&
-                  y + j < HEIGHT) {
-                    frame.HSV[(y + j) * WIDTH + (x + i)] = color;
+                    y + j < HEIGHT) {
+                  frame.HSV[(y + j) * WIDTH + (x + i)] = color;
                 }
               }
             }
@@ -101,33 +111,36 @@ void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
         }
       }
     }
-    
-    if (!inRange) return;
-    
-    auto  p1 = projectPoint(camerasys, s);
-    auto  p2 = projectPoint(camerasys, e);
+
+    if (!inRange)
+      return;
+
+    auto p1 = projectPoint(camerasys, s);
+    auto p2 = projectPoint(camerasys, e);
     auto Δx = (*p1).x - (*p2).x;
     auto Δy = (*p1).y - (*p2).y;
-    
+
     double angle = std::atan2(Δy, Δx); // Calculate angle of line
-    if (angle < 0) angle += M_PI;
-    
-    double distanceToOrigin = -std::sin(angle) * (*p1).x + std::cos(angle) * (*p1).y;
-    
+    if (angle < 0)
+      angle += M_PI;
+
+    double distanceToOrigin =
+        -std::sin(angle) * (*p1).x + std::cos(angle) * (*p1).y;
+
     drawLineInFrame(frame, ScreenLine{angle, distanceToOrigin}, color);
     return;
   };
-    
+
   auto [s, e] = getStartEndPoints(line);
-  auto  p1 = projectPoint(camerasys, s);
-  auto  p2 = projectPoint(camerasys, e);
-  
+  auto p1 = projectPoint(camerasys, s);
+  auto p2 = projectPoint(camerasys, e);
+
   if (p1.has_value() && p2.has_value()) {
     checkAndDrawLine(s, e);
     return;
   }
   if (!p1.has_value() && !p2.has_value()) {
-    //std::cerr << "None of the two points is on the screen.";
+    // std::cerr << "None of the two points is on the screen.";
     return;
   }
   if (p2.has_value()) {
@@ -138,28 +151,26 @@ void drawProjectedLine(Frame &frame, Pose& pose, Line line, HSVPixel color) {
   // p1 is in the screen and p2 out.
   // s is in the screen and e out.
   Vector v{s.x - e.x, s.y - e.y, s.z - e.z};
-  e = e + v * (( camerasys.z * camerasys.origin - camerasys.z * e) / (v * camerasys.z) + 1 / std::sqrt(v * v) );
+  e = e + v * ((camerasys.z * camerasys.origin - camerasys.z * e) /
+                   (v * camerasys.z) +
+               1 / std::sqrt(v * v));
   checkAndDrawLine(s, e);
-  
 }
 
-void drawProjectedLines(Frame &frame, Pose &pose){
-  
-  std::vector<std::pair<std::array<Line, 4>, HSVPixel>> linesColors
-              {{outerLines, {180, 255, 30}},
-              {innerLines, {180, 255, 255}},
-              {blueLines, {180, 255, 255}},
-              {orangeLines, {0, 255, 255}}};
-  
-  for (auto [lines, color] : linesColors){
-    for (auto line : lines){
+void drawProjectedLines(Frame &frame, Pose &pose) {
+
+  std::vector<std::pair<std::array<Line, 4>, HSVPixel>> linesColors{
+      {outerLines, {180, 255, 30}},
+      {innerLines, {180, 255, 255}},
+      {blueLines, {180, 255, 255}},
+      {orangeLines, {0, 255, 255}}};
+
+  for (auto [lines, color] : linesColors) {
+    for (auto line : lines) {
       drawProjectedLine(frame, pose, line, color);
     }
   }
 }
-
-
-
 
 /// Returns two arbitrary points on a given ScreenLine.
 std::pair<ScreenPosition, ScreenPosition>
@@ -207,39 +218,46 @@ double loss(const std::pair<ScreenLine, Vector> &constraint,
   return dist * dist;
 }
 
-// Matches a ScreenLine to a line on the board by taking the line on the board
-/// where the endpoints have the smallest distance to the plane of the
-/// ScreenLine. Also discards candidates which are very far from being visible
-/// on the screen.
-std::optional<Line> matchBoardLine(const ScreenLine &screenLine,
+/// Matches a ScreenLine to a line on the board by taking the line on the board
+/// where the points on that boardline which are on the screen have the smallest
+/// squared distance to the line. Returns 3D points on that line which are on
+/// the screen.
+std::vector<Vector> matchBoardLine(const ScreenLine &screenLine,
                                    const Pose &posePreviousFrame,
                                    std::array<Line, 4> candidates) {
   CoordinateSystem cameraSystemPreviousFrame =
       getCameraSystem(posePreviousFrame);
-  Line bestCandidate = Line::INVALID;
-  double bestLoss = 1e9;
-  for (int i = 0; i < 4; ++i) {
+  std::vector<Vector> points;
+  double bestAv = 1e9;
+  for (long unsigned int i = 0; i < candidates.size(); ++i) {
     auto [s, e] = getStartEndPoints(candidates[i]);
-    bool inRange = false;
-    for (double t = 0; t < 1. + 1e-5 && !inRange; t += 0.05) {
+    auto se = e - s;
+    double sum = 0;
+    std::vector<Vector> tpoints;
+    for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
       Vector v = s * (1. - t) + e * t;
       if (auto projected = projectPoint(cameraSystemPreviousFrame, v)) {
-        inRange |= projected->x >= 0 && projected->x < WIDTH &&
-                   projected->y >= 0 && projected->y < HEIGHT;
+        if (projected->x >= 0 && projected->x < WIDTH && projected->y >= 0 &&
+            projected->y < HEIGHT) {
+          sum += std::pow(projected->x * -sin(screenLine.angle) +
+                              projected->y * cos(screenLine.angle) -
+                              screenLine.distanceToOrigin,
+                          2);
+          tpoints.push_back(v);
+        }
       }
     }
-    if (!inRange)
+    if (tpoints.size() < 3)
       continue;
-    double candidateLoss = loss({screenLine, s}, posePreviousFrame) +
-                           loss({screenLine, e}, posePreviousFrame);
-    if (candidateLoss < bestLoss) {
-      bestLoss = candidateLoss;
-      bestCandidate = candidates[i];
+    double average = sum / double(tpoints.size());
+    if (average < bestAv) {
+      bestAv = average;
+      points = tpoints;
     }
   }
   // TODO: tweak this number
-  if (bestLoss < /*200. */ 1e9)
-    return {bestCandidate};
+  if (bestAv < 1e4)
+    return points;
   else
     return {};
 }
@@ -257,10 +275,8 @@ getConstraints(const ScreenLineSet &screenLines,
     if (!screenLineOpt.has_value())
       return;
     ScreenLine screenLine = *screenLineOpt;
-    if (auto line = matchBoardLine(screenLine, posePreviousFrame, candidates)) {
-      auto [s, e] = getStartEndPoints(*line);
-      constraints.push_back({screenLine, s});
-      constraints.push_back({screenLine, e});
+    for (auto p : matchBoardLine(screenLine, posePreviousFrame, candidates)) {
+      constraints.push_back({screenLine, p});
     }
   };
   matchAddConstraints(screenLines.blue, blueLines);
@@ -278,9 +294,11 @@ getConstraints(const ScreenLineSet &screenLines,
 /// distance of the distance of the point to the plane.
 Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
              const Pose &currentEstimate) {
-  // I am only 60% confident that this is correct. It seems a bit too nice to be
-  // correct.
+  // It's crazy that this works. I thought the formula would be way more ugly.
+  // It even seems to work with camera twist. No idea why, I though it'd then
+  // require some rotation of tangent but apparently no.
   CoordinateSystem cameraSystem = getCameraSystem(currentEstimate);
+  double depth = constraint.second * cameraSystem.z;
   Plane plane = planeFromLine(constraint.first, cameraSystem);
   double dist = constraint.second * plane.normal - plane.d;
   Vector closePoint = constraint.second - plane.normal * dist;
@@ -288,7 +306,10 @@ Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
   Vector diff = closePoint - constraint.second;
   Vector tangent = {-closePointCamera.y, closePointCamera.x, 0};
   double thetaGrad = tangent * diff;
-  return {diff.x, diff.y, thetaGrad * 0.001};
+  // Make gradients from constraints with high depth smaller since there
+  // distance corresponds to smaller distance on screen.
+  double fac = 1. / depth;
+  return {diff.x * fac, diff.y * fac, thetaGrad * 0.001 * fac};
 }
 
 void printPose(const Pose &pose) {
@@ -303,19 +324,23 @@ std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
   auto constraints = getConstraints(screenLines, posePreviousFrame);
   Pose pose = posePreviousFrame;
   printPose(pose);
-  const float learningRate = 0.01;
+  const float learningRate = 1.;
   for (int epoch = 0; epoch < 1000; ++epoch) {
     Pose adjustment{0, 0, 0};
     for (auto constraint : constraints) {
       adjustment = adjustment + getGrad(constraint, pose);
     }
+    if (epoch % 100 == 0) {
+      // std::cerr << "dtheta: " << adjustment.theta << ", dx: " << adjustment.x
+      //          << ", dy: " << adjustment.y << std::endl;
+    }
     pose = pose + adjustment * -learningRate;
-    // printPose(pose);
   }
   double totalLoss = 0;
   for (auto constraint : constraints) {
     totalLoss += loss(constraint, pose);
   }
+  std::cout << "final pose loss: " << totalLoss << std::endl;
   // TODO: tweak this number.
   if (totalLoss < 200.) {
     return {pose};
@@ -335,7 +360,8 @@ void printCoordinateSystem(const CoordinateSystem &cs) {
   printVector("origin", cs.origin);
 }
 
-int test_main() {
+#ifdef CAM_TESTING
+int main() {
   Pose pose{200, 50, 0.4 + M_PI};
   auto cs = getCameraSystem(pose);
   printCoordinateSystem(cs);
@@ -360,5 +386,27 @@ int test_main() {
 
   cleanCamera();
 
-
+  return 0;
 }
+#endif
+
+#ifdef GRAD_TESTING
+int main() {
+  Pose pose{50, 150, M_PI};
+  ScreenLine screenLine{M_PI_2, 200};
+  Vector p = getStartEndPoints(Line::BORDER_OUT_1).second;
+  std::pair<ScreenLine, Vector> constraint{screenLine, p};
+  auto grad = getGrad(constraint, pose);
+  const double eps = 1e-8;
+  double preLoss = loss(constraint, pose);
+  double postXLoss = loss(constraint, pose + Pose{eps, 0, 0});
+  double postYLoss = loss(constraint, pose + Pose{0, eps, 0});
+  double postTLoss = loss(constraint, pose + Pose{0, 0, eps});
+  std::cerr << "XGrad: " << grad.x * 2
+            << ", XNumGrad: " << (postXLoss - preLoss) / eps << std::endl;
+  std::cerr << "YGrad: " << grad.y * 2
+            << ", YNumGrad: " << (postYLoss - preLoss) / eps << std::endl;
+  std::cerr << "TGrad: " << grad.theta / 0.001 * 2
+            << ", TNumGrad: " << (postTLoss - preLoss) / eps << std::endl;
+}
+#endif
