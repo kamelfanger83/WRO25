@@ -15,7 +15,7 @@
 const std::string port = "/dev/ttyUSB0";
 const int baud = B115200;
 
-// its a bit cringe to have glocals in cpp file which is meant to be included
+// its a bit cringe to have globals in cpp file which is meant to be included
 // but whatever
 int serial_port;
 bool initialized = false;
