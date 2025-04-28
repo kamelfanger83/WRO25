@@ -294,10 +294,9 @@ getConstraints(const ScreenLineSet &screenLines,
 /// distance of the distance of the point to the plane.
 Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
              const Pose &currentEstimate) {
-  // I am only 60% confident that this is correct. It seems a bit too nice to be
-  // correct.
-  // Update: I think it is correct. However, it does not take into account twist
-  // but since only have a very small twist that is probably fine.
+  // It's crazy that this works. I thought the formula would be way more ugly.
+  // It even seems to work with camera twist. No idea why, I though it'd then
+  // require some rotation of tangent but apparently no.
   CoordinateSystem cameraSystem = getCameraSystem(currentEstimate);
   double depth = constraint.second * cameraSystem.z;
   Plane plane = planeFromLine(constraint.first, cameraSystem);
@@ -306,7 +305,6 @@ Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
   Vector closePointCamera = closePoint - cameraSystem.origin;
   Vector diff = closePoint - constraint.second;
   Vector tangent = {-closePointCamera.y, closePointCamera.x, 0};
-  tangent = rotateAroundAxis(tangent, cameraSystem.z, -CAMERA_TWIST);
   double thetaGrad = tangent * diff;
   // Make gradients from constraints with high depth smaller since there
   // distance corresponds to smaller distance on screen.
@@ -362,7 +360,7 @@ void printCoordinateSystem(const CoordinateSystem &cs) {
   printVector("origin", cs.origin);
 }
 
-#ifdef TESTING
+#ifdef CAM_TESTING
 int main() {
   Pose pose{200, 50, 0.4 + M_PI};
   auto cs = getCameraSystem(pose);
@@ -389,5 +387,26 @@ int main() {
   cleanCamera();
 
   return 0;
+}
+#endif
+
+#ifdef GRAD_TESTING
+int main() {
+  Pose pose{50, 150, M_PI};
+  ScreenLine screenLine{M_PI_2, 200};
+  Vector p = getStartEndPoints(Line::BORDER_OUT_1).second;
+  std::pair<ScreenLine, Vector> constraint{screenLine, p};
+  auto grad = getGrad(constraint, pose);
+  const double eps = 1e-8;
+  double preLoss = loss(constraint, pose);
+  double postXLoss = loss(constraint, pose + Pose{eps, 0, 0});
+  double postYLoss = loss(constraint, pose + Pose{0, eps, 0});
+  double postTLoss = loss(constraint, pose + Pose{0, 0, eps});
+  std::cerr << "XGrad: " << grad.x * 2
+            << ", XNumGrad: " << (postXLoss - preLoss) / eps << std::endl;
+  std::cerr << "YGrad: " << grad.y * 2
+            << ", YNumGrad: " << (postYLoss - preLoss) / eps << std::endl;
+  std::cerr << "TGrad: " << grad.theta / 0.001 * 2
+            << ", TNumGrad: " << (postTLoss - preLoss) / eps << std::endl;
 }
 #endif
