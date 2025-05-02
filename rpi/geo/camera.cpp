@@ -258,7 +258,7 @@ std::vector<Vector> matchBoardLine(const ScreenLine &screenLine,
     }
   }
   // TODO: tweak this number
-  if (bestAv < 1e6) {
+  if (bestAv < 1e4) {
     std::cout << "Matched " << screenLineName << " to " << int(bLine)
               << " with average = " << bestAv << std::endl;
     return points;
@@ -319,7 +319,7 @@ Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
   double thetaGrad = tangent * diff;
   // Make gradients from constraints with high depth smaller since there
   // distance corresponds to smaller distance on screen.
-  double fac = 1. / depth;
+  double fac = 1. / std::max(10., depth);
   return {diff.x * fac, diff.y * fac, thetaGrad * 0.001 * fac};
 }
 
@@ -331,29 +331,31 @@ void printPose(const Pose &pose) {
 /// Uses gradient descent to find the pose for which the given constraints are
 /// satisfied as well as possible.
 std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
-                                 const Pose &posePreviousFrame) {
+                                 const Pose &posePreviousFrame, Pose &debug) {
   auto constraints = getConstraints(screenLines, posePreviousFrame);
+  std::cout << "constaints.size() = " << constraints.size() << std::endl;
   Pose pose = posePreviousFrame;
   printPose(pose);
-  const float learningRate = 1.;
+  const float learningRate = 3.;
   for (int epoch = 0; epoch < 1000; ++epoch) {
     Pose adjustment{0, 0, 0};
     for (auto constraint : constraints) {
       adjustment = adjustment + getGrad(constraint, pose);
     }
-    if (epoch % 100 == 0) {
-      // std::cerr << "dtheta: " << adjustment.theta << ", dx: " << adjustment.x
-      //          << ", dy: " << adjustment.y << std::endl;
+    pose = pose + adjustment * (-learningRate / float(constraints.size()));
+    if (true) {
+      std::cout << "theta: " << pose.theta << ", x: " << pose.x
+                << ", y: " << pose.y << std::endl;
     }
-    pose = pose + adjustment * -learningRate;
   }
   double totalLoss = 0;
   for (auto constraint : constraints) {
     totalLoss += loss(constraint, pose);
   }
   std::cout << "final pose loss: " << totalLoss << std::endl;
+  debug = pose;
   // TODO: tweak this number.
-  if (totalLoss < 200.) {
+  if (totalLoss < 1000.) {
     return {pose};
   } else {
     std::cout
