@@ -21,6 +21,7 @@ void registerPulse () {
   ++pulses;
 }
 
+
 Servo myservo;
 float predictedTurnRadius(int currentServo){
  if(currentServo == 84) return 10000000;
@@ -33,7 +34,7 @@ float predictedTurnRadius(int currentServo){
  return 1./(a*angle) + b;
 }
 
-/
+
 
 void setup() {
   Serial.begin(115200);
@@ -49,7 +50,7 @@ void setup() {
 
   // Send a ready signal after initialization
   Serial.println("READY");
-  Serial.println(servoAngleToWheelAngle(84.5));
+  
 }
 
 void loop() {
@@ -89,7 +90,7 @@ void loop() {
   
   // TODO: consider which back wheel slips how much
   
-  float dTheta = (shaftD * wheelDiam * M_PI) / (turnR + 5*(turnR>0 ? 1 : -1));
+  float dTheta = (shaftD * wheelDiam * M_PI) / (turnR + 5.2*(turnR>0 ? 1 : -1));
  
   // Coordinates are in ICR system. Idk coordinate systems here are a bit of a
   // mess.
@@ -109,9 +110,6 @@ void loop() {
     Serial.print(theta);
     Serial.println("]");
     lastPosePrint = micros();
-    Serial.println(servoAngleToWheelAngle(actualServo));
   }
-  /*if (theta <= -M_PI_2 ) {
-    analogWrite(PWM_PIN, 255 - abs(0));
-  }*/
+  
 }

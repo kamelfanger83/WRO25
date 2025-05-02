@@ -31,11 +31,11 @@ startMode(const Frame &frame, const Pose &position) {
   Waypoint startPoint;
   startPoint.x = position.x;
   startPoint.y = position.y;
-
-  waypoints.push({50, 250});
-  waypoints.push({250, 250});
-  waypoints.push({250, 50});
-  waypoints.push({50, 50});
+  /// can play arround in here
+  waypoints.push({50, 228});
+  waypoints.push({228, 250});
+  waypoints.push({250, 72});
+  waypoints.push({78, 50});
   waypoints.push(startPoint);
 
   return {std::make_pair(waypoints, Mode{endMode})};
