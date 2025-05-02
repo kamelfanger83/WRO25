@@ -33,42 +33,7 @@ float predictedTurnRadius(int currentServo){
  return 1./(a*angle) + b;
 }
 
-//returns the secant point of 2 circles
-float holderFrontY(float fusionYSteer) {
-    // Parameters of the wheel holder circle
-    const float x1 = -6.0, y1 = -6.0, r1 = 2.6;
-    // Parameters of the connector piece circle
-    const float x2 = -7.8, r2 = 2.8105;
-    const float y2 = fusionYSteer;
-
-    float dx = x2 - x1;
-    float dy = y2 - y1;
-    float d = sqrt(dx * dx + dy * dy);
-
-    float a = (r1*r1 - r2*r2 + d*d) / (2 * d);
-    float x3 = x1 + a * dx / d;
-    float y3 = y1 + a * dy / d;
-
-    float h = sqrt(r1*r1 - a*a);
-
-    float rx = -dy * (h / d);
-    float ry = dx * (h / d);
-
-    float xi1 = x3 + rx;
-    float yi1 = y3 + ry;
-    float xi2 = x3 - rx;
-    float yi2 = y3 - ry;
-
-    // Take point with smaller x (the other one we don't care about)
-    return (xi1 < xi2) ? yi1 : yi2;
-}
-
-/// Returns the angle the wheels are tilted given the angle of the servo.
-float servoAngleToWheelAngle(int actualServo) {
-  float fusionYSteer = -3.3058 + float(84.5 - actualServo) * 0.020944;
-  float yHolderFront = holderFrontY(fusionYSteer);
-  return asin((-6 - yHolderFront) / 2.6);
-}
+/
 
 void setup() {
   Serial.begin(115200);
@@ -118,10 +83,10 @@ void loop() {
   }
   float shaftD = float(pulses - lastUpdatePulses) / 268.;
   lastUpdatePulses = pulses;
-  //float wheelAngle = servoAngleToWheelAngle(actualServo);
+  
 
   float turnR = predictedTurnRadius(actualServo);
-  //float turnR = 17.5 / tan(wheelAngle);
+  
   // TODO: consider which back wheel slips how much
   
   float dTheta = (shaftD * wheelDiam * M_PI) / (turnR + 5*(turnR>0 ? 1 : -1));
