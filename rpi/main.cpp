@@ -58,7 +58,7 @@ int main() {
 
   long long lastTimeStamp = -1;
 
-  double blindError = 0.;
+  double blindError = 1e6;
   Commands commands;
 
   while (true) {
@@ -74,12 +74,12 @@ int main() {
       lastArduinoPose = *arduinoPose;
     }
 
-    if (blindError > 50.) {
+    if (blindError > 100.) {
       blindError = 0.;
       commands.speed = 0;
       sendCommands(commands);
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+      std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
       lastTimeStamp = lastFrame.timestamp;
       queueCapture();
@@ -92,15 +92,15 @@ int main() {
       printPose(pose);
       auto screenLines = findLines(lastFrame, pose);
       drawScreenLineSet(lastFrame, screenLines);
-      auto poset = optimizePose(screenLines, pose);
+      Pose debug;
+      auto poset = optimizePose(screenLines, pose, debug);
+      drawProjectedLines(lastFrame, debug);
+      saveFrame(lastFrame);
       if (!poset.has_value()) {
         std::cout << "AW HELL NAW" << std::endl;
         break;
       }
       pose = *poset;
-
-      drawProjectedLines(lastFrame, pose);
-      saveFrame(lastFrame);
 
       std::cout << "Post visual pose:\n";
       printPose(pose);
