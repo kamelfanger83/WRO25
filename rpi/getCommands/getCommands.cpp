@@ -7,7 +7,7 @@
 Commands getCommands(const Pose &pose, const Waypoint &waypoint,
                      ControllerState &state) {
   const double Kp =
-      500; // proportional gain, has to be tested on vehicle to be calibrated
+      100; // proportional gain, has to be tested on vehicle to be calibrated
   const double Kd = 0; // differential gain, same as above
   const double base_speed = 50;
   const double base_angle = 84;
