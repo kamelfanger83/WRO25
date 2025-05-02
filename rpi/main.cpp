@@ -124,6 +124,8 @@ int main() {
     sendCommands(commands);
   }
 
+  sendCommands({90, 0});
+
   cleanCamera();
 
   return 0;

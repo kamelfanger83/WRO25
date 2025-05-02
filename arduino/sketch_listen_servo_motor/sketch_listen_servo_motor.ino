@@ -1,5 +1,6 @@
 #include <Servo.h>
 
+
 #define PWM_PIN 11
 #define FG_PIN 2
 #define DIR_PIN 9
@@ -10,23 +11,34 @@ int targetServo = 84;
 
 // Positioning variables. Everything is in cm.
 float x = 0, y = 0, theta = 0;
-const float wheelDiam = 5.1;
+const float wheelDiam = 5.13;
 volatile unsigned long pulses = 0;
 unsigned long lastUpdatePulses = 0;
 
 unsigned long lastPosePrint = 0;
-
+unsigned long lastServoUpdate =0;
 void registerPulse () {
   ++pulses;
 }
 
 Servo myservo;
+float predictedTurnRadius(int currentServo){
+ if(currentServo == 84) return 10000000;
+ float a = 0.000372471;
+ float b = -5.71154;
+ int angle = abs(currentServo-84);
+ if(currentServo < 84){
+  return -(1./(a*angle) + b);
+ }
+ return 1./(a*angle) + b;
+}
 
+//returns the secant point of 2 circles
 float holderFrontY(float fusionYSteer) {
     // Parameters of the wheel holder circle
-    const float x1 = -6.0, y1 = -6.0, r1 = 2.9625;
+    const float x1 = -6.0, y1 = -6.0, r1 = 2.6;
     // Parameters of the connector piece circle
-    const float x2 = -7.8, r2 = 2.9343005793545;
+    const float x2 = -7.8, r2 = 2.8105;
     const float y2 = fusionYSteer;
 
     float dx = x2 - x1;
@@ -55,7 +67,7 @@ float holderFrontY(float fusionYSteer) {
 float servoAngleToWheelAngle(int actualServo) {
   float fusionYSteer = -3.3058 + float(84.5 - actualServo) * 0.020944;
   float yHolderFront = holderFrontY(fusionYSteer);
-  return asin((-6 - yHolderFront) / 2.9625);
+  return asin((-6 - yHolderFront) / 2.6);
 }
 
 void setup() {
@@ -72,6 +84,7 @@ void setup() {
 
   // Send a ready signal after initialization
   Serial.println("READY");
+  Serial.println(servoAngleToWheelAngle(84.5));
 }
 
 void loop() {
@@ -79,29 +92,40 @@ void loop() {
     // Read the full line until newline
     String input = Serial.readStringUntil('\n');
     int num = input.toInt();  // convert the string to an integer
-    
-    if (num % 2 == 0) {
+    if(num==6969){
+      x = 0;
+      y = 0;
+      theta = 0;
+    }
+    else if (num % 2 == 0) {
       Serial.print("New motor speed: ");
       Serial.println(num / 2);
       digitalWrite(DIR_PIN, num >= 0 ? LOW : HIGH);
       analogWrite(PWM_PIN, 255 - abs(num / 2));
-    } else {
+    } else  {
       targetServo = num / 2;
       Serial.print("New servo angle:");
       Serial.println(targetServo);
+      
     }
   }
-  if (actualServo != targetServo) {
+  
+  if(micros() > lastServoUpdate + 5200 && actualServo != targetServo) {
     if (actualServo > targetServo) --actualServo;
     if (actualServo < targetServo) ++actualServo;
     myservo.write(actualServo);
+    lastServoUpdate = micros();
   }
   float shaftD = float(pulses - lastUpdatePulses) / 268.;
   lastUpdatePulses = pulses;
-  float wheelAngle = servoAngleToWheelAngle(actualServo);
-  float turnR = 17.5 / tan(wheelAngle);
+  //float wheelAngle = servoAngleToWheelAngle(actualServo);
+
+  float turnR = predictedTurnRadius(actualServo);
+  //float turnR = 17.5 / tan(wheelAngle);
   // TODO: consider which back wheel slips how much
-  float dTheta = (shaftD * wheelDiam * M_PI) / turnR;
+  
+  float dTheta = (shaftD * wheelDiam * M_PI) / (turnR + 5*(turnR>0 ? 1 : -1));
+ 
   // Coordinates are in ICR system. Idk coordinate systems here are a bit of a
   // mess.
   float xC = turnR;
@@ -111,7 +135,7 @@ void loop() {
   x += (xCp - xC) * sin(theta) + (yCp - yC) * cos(theta);
   y += -(xCp - xC) * cos(theta) + (yCp - yC) * sin(theta);
   theta += dTheta;
-  if (micros() > lastPosePrint + 50000) {
+  if (micros() > lastPosePrint + 10000) {
     Serial.print("[x=");
     Serial.print(x);
     Serial.print(",y=");
@@ -120,12 +144,9 @@ void loop() {
     Serial.print(theta);
     Serial.println("]");
     lastPosePrint = micros();
+    Serial.println(servoAngleToWheelAngle(actualServo));
   }
-  /* int i = 0;
-  for(int j = 0;j<8;j++)  {
-    i += pulseIn(FG_PIN, HIGH, 500000); //SIGNAL OUTPUT PIN 9 with  white line,cycle = 2*i,1s = 1000000us，Signal cycle pulse number：27*2
-  }
-  i = i >> 3;
-  Serial.print(111111 / i); //speed   r/min  (60*1000000/(45*6*2*i))
-  Serial.println("  r/min"); */
+  /*if (theta <= -M_PI_2 ) {
+    analogWrite(PWM_PIN, 255 - abs(0));
+  }*/
 }
