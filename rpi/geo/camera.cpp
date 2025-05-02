@@ -1,3 +1,5 @@
+#pragma once
+
 #include <array>
 #include <cmath>
 #include <iomanip>
@@ -7,7 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include "../camera/find_line.cpp"
+#include "../camera/draw_line.cpp"
 #include "../structs.h"
 #include "../utils.cpp"
 #include "constants.h"
@@ -81,80 +83,77 @@ std::optional<ScreenPosition> projectPoint(const CoordinateSystem &cameraSystem,
   return {{x, y}};
 }
 
-void drawProjectedLine(Frame &frame, Pose &pose, Line line, HSVPixel color) {
+std::optional<ScreenLine> projectLine(const Pose &pose, Line line,
+                                      bool piPeriod = true) {
 
   auto camerasys = getCameraSystem(pose);
 
-  auto checkAndDrawLine = [&](Vector s, Vector e) {
-    bool inRange = false;
-    auto se = e - s;
-    for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
-      Vector v = s * (1. - t) + e * t;
-      if (auto projected = projectPoint(camerasys, v)) {
-        bool ons = projected->x >= 0 && projected->x < WIDTH &&
-                   projected->y >= 0 && projected->y < HEIGHT;
-        inRange |= ons;
-        if (ons) {
-          // draw small circle at projected point
-          int x = std::round(projected->x);
-          int y = std::round(projected->y);
-          for (int i = -2; i <= 2; ++i) {
-            for (int j = -2; j <= 2; ++j) {
-              if (i * i + j * j <= 4) {
-                if (x + i >= 0 && x + i < WIDTH && y + j >= 0 &&
-                    y + j < HEIGHT) {
-                  frame.HSV[(y + j) * WIDTH + (x + i)] = color;
-                }
+  auto [s, e] = getStartEndPoints(line);
+
+  auto p1 = projectPoint(camerasys, s);
+  auto p2 = projectPoint(camerasys, e);
+  if (p1.has_value() && p2.has_value()) {
+    return {lineFromPoints(*p1, *p2, piPeriod)};
+  }
+  if (!p1.has_value() && !p2.has_value())
+    return {};
+  bool flipped = false;
+  if (p2.has_value()) {
+    std::swap(s, e);
+    flipped = true;
+  }
+
+  Vector v{s.x - e.x, s.y - e.y, s.z - e.z};
+  e = e + v * ((camerasys.z * camerasys.origin - camerasys.z * e) /
+                   (v * camerasys.z) +
+               1 / std::sqrt(v * v));
+
+  p1 = projectPoint(camerasys, s);
+  p2 = projectPoint(camerasys, e);
+  auto screenLine = lineFromPoints(unwrap(p1), unwrap(p2), piPeriod);
+  if (!piPeriod && flipped) {
+    screenLine.angle += M_PI;
+    // ideally we'd also bring it in the range of [-PI, PI) or something but who
+    // cares.
+  }
+  return {screenLine};
+}
+
+void drawProjectedLine(Frame &frame, const Pose &pose, Line line,
+                       HSVPixel color) {
+
+  auto camerasys = getCameraSystem(pose);
+  auto [s, e] = getStartEndPoints(line);
+
+  bool inRange = false;
+  auto se = e - s;
+  for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
+    Vector v = s * (1. - t) + e * t;
+    if (auto projected = projectPoint(camerasys, v)) {
+      bool ons = projected->x >= 0 && projected->x < WIDTH &&
+                 projected->y >= 0 && projected->y < HEIGHT;
+      inRange |= ons;
+      if (ons) {
+        // draw small circle at projected point
+        int x = std::round(projected->x);
+        int y = std::round(projected->y);
+        for (int i = -2; i <= 2; ++i) {
+          for (int j = -2; j <= 2; ++j) {
+            if (i * i + j * j <= 4) {
+              if (x + i >= 0 && x + i < WIDTH && y + j >= 0 && y + j < HEIGHT) {
+                frame.HSV[(y + j) * WIDTH + (x + i)] = color;
               }
             }
           }
         }
       }
     }
-
-    if (!inRange)
-      return;
-
-    auto p1 = projectPoint(camerasys, s);
-    auto p2 = projectPoint(camerasys, e);
-    auto Δx = (*p1).x - (*p2).x;
-    auto Δy = (*p1).y - (*p2).y;
-
-    double angle = std::atan2(Δy, Δx); // Calculate angle of line
-    if (angle < 0)
-      angle += M_PI;
-
-    double distanceToOrigin =
-        -std::sin(angle) * (*p1).x + std::cos(angle) * (*p1).y;
-
-    drawLineInFrame(frame, ScreenLine{angle, distanceToOrigin}, color);
-    return;
-  };
-
-  auto [s, e] = getStartEndPoints(line);
-  auto p1 = projectPoint(camerasys, s);
-  auto p2 = projectPoint(camerasys, e);
-
-  if (p1.has_value() && p2.has_value()) {
-    checkAndDrawLine(s, e);
-    return;
-  }
-  if (!p1.has_value() && !p2.has_value()) {
-    // std::cerr << "None of the two points is on the screen.";
-    return;
-  }
-  if (p2.has_value()) {
-    std::swap(p1, p2);
-    std::swap(s, e);
   }
 
-  // p1 is in the screen and p2 out.
-  // s is in the screen and e out.
-  Vector v{s.x - e.x, s.y - e.y, s.z - e.z};
-  e = e + v * ((camerasys.z * camerasys.origin - camerasys.z * e) /
-                   (v * camerasys.z) +
-               1 / std::sqrt(v * v));
-  checkAndDrawLine(s, e);
+  if (inRange)
+    // Unwrapping is fine because we know that if the line is in range, surely
+    // one point has to be in front of the camera.
+    drawLineInFrame(frame, unwrap(projectLine(pose, line)), color);
 }
 
 void drawProjectedLines(Frame &frame, Pose &pose) {
@@ -224,11 +223,13 @@ double loss(const std::pair<ScreenLine, Vector> &constraint,
 /// the screen.
 std::vector<Vector> matchBoardLine(const ScreenLine &screenLine,
                                    const Pose &posePreviousFrame,
-                                   std::array<Line, 4> candidates) {
+                                   std::array<Line, 4> candidates,
+                                   std::string screenLineName) {
   CoordinateSystem cameraSystemPreviousFrame =
       getCameraSystem(posePreviousFrame);
   std::vector<Vector> points;
   double bestAv = 1e9;
+  Line bLine = Line::BORDER_OUT_1;
   for (long unsigned int i = 0; i < candidates.size(); ++i) {
     auto [s, e] = getStartEndPoints(candidates[i]);
     auto se = e - s;
@@ -253,13 +254,21 @@ std::vector<Vector> matchBoardLine(const ScreenLine &screenLine,
     if (average < bestAv) {
       bestAv = average;
       points = tpoints;
+      bLine = candidates[i];
     }
   }
   // TODO: tweak this number
-  if (bestAv < 1e4)
+  if (bestAv < 1e6) {
+    std::cout << "Matched " << screenLineName << " to " << int(bLine)
+              << " with average = " << bestAv << std::endl;
     return points;
-  else
+  } else {
+    std::cout << "Wasn't able to find a line which makes sufficient amount of "
+                 "sense for "
+              << screenLineName << ". Best would have been " << int(bLine)
+              << " with average = " << bestAv << std::endl;
     return {};
+  }
 }
 
 /// Returns a vector of constraints for the optimization process. Each
@@ -271,19 +280,21 @@ getConstraints(const ScreenLineSet &screenLines,
                const Pose &posePreviousFrame) {
   std::vector<std::pair<ScreenLine, Vector>> constraints;
   auto matchAddConstraints = [&](const std::optional<ScreenLine> &screenLineOpt,
-                                 std::array<Line, 4> candidates) {
+                                 std::array<Line, 4> candidates,
+                                 std::string screenLineName) {
     if (!screenLineOpt.has_value())
       return;
     ScreenLine screenLine = *screenLineOpt;
-    for (auto p : matchBoardLine(screenLine, posePreviousFrame, candidates)) {
+    for (auto p : matchBoardLine(screenLine, posePreviousFrame, candidates,
+                                 screenLineName)) {
       constraints.push_back({screenLine, p});
     }
   };
-  matchAddConstraints(screenLines.blue, blueLines);
-  matchAddConstraints(screenLines.orange, orangeLines);
-  matchAddConstraints(screenLines.left, outerLines);
-  matchAddConstraints(screenLines.back, outerLines);
-  matchAddConstraints(screenLines.right, innerLines);
+  matchAddConstraints(screenLines.blue, blueLines, "blue");
+  matchAddConstraints(screenLines.orange, orangeLines, "orange");
+  matchAddConstraints(screenLines.left, outerLines, "left");
+  matchAddConstraints(screenLines.back, outerLines, "back");
+  matchAddConstraints(screenLines.right, innerLines, "right");
   return constraints;
 }
 
@@ -345,7 +356,7 @@ std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
   if (totalLoss < 200.) {
     return {pose};
   } else {
-    std::cerr
+    std::cout
         << "No pose which makes a sufficient amount of sense could be found"
         << std::endl;
     return {};

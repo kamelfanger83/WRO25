@@ -56,33 +56,55 @@ int main() {
   Pose lastArduinoPose = {0, 0, 0};
   ControllerState controllerState{0};
 
-  // long long lastTimeStamp = -1;
+  long long lastTimeStamp = -1;
+
+  double blindError = 0.;
+  Commands commands;
 
   while (true) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(30));
-    /* while (lastFrame.timestamp == lastTimeStamp) {
-      std::this_thread::sleep_for(std::chrono::microseconds(10));
-    }
-    lastTimeStamp = lastFrame.timestamp; */
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     auto arduinoPose = processArduinoResponse();
     if (arduinoPose.has_value()) {
-      pose = pose * (*arduinoPose / lastArduinoPose);
+      auto diffPose = *arduinoPose / lastArduinoPose;
+      blindError +=
+          std::sqrt(diffPose.x * diffPose.x + diffPose.y * diffPose.y) +
+          100 * std::abs(diffPose.theta);
+      pose = pose * diffPose;
       lastArduinoPose = *arduinoPose;
     }
 
-    std::cout << "Pre visual pose:\n";
-    printPose(pose);
+    if (blindError > 50.) {
+      blindError = 0.;
+      commands.speed = 0;
+      sendCommands(commands);
 
-    /* auto poset = optimizePose(findLines(lastFrame), pose);
-    if (!poset.has_value()) {
-      std::cout << "AW HELL NAW" << std::endl;
-      break;
+      std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+      lastTimeStamp = lastFrame.timestamp;
+      queueCapture();
+      while (lastTimeStamp == lastFrame.timestamp) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+      }
+      std::cout << "Captured a frame at: " << lastFrame.timestamp << std::endl;
+
+      std::cout << "Pre visual pose:\n";
+      printPose(pose);
+      auto screenLines = findLines(lastFrame, pose);
+      drawScreenLineSet(lastFrame, screenLines);
+      auto poset = optimizePose(screenLines, pose);
+      if (!poset.has_value()) {
+        std::cout << "AW HELL NAW" << std::endl;
+        break;
+      }
+      pose = *poset;
+
+      drawProjectedLines(lastFrame, pose);
+      saveFrame(lastFrame);
+
+      std::cout << "Post visual pose:\n";
+      printPose(pose);
     }
-    pose = *poset; */
-
-    // std::cout << "Post visual pose:\n";
-    // printPose(pose);
 
     if (waypoints.front().reached(pose)) {
       waypoints.pop();
@@ -95,11 +117,11 @@ int main() {
       waypoints = result->first;
       nextMode = result->second;
     }
-    Commands commands = getCommands(pose, waypoints.front(), controllerState);
+
+    commands = getCommands(pose, waypoints.front(), controllerState);
+    // std::cout << "Aiming for commands: ang=" << commands.angle
+    //          << ", speed=" << commands.speed << std::endl;
     sendCommands(commands);
-    // drawProjectedLines(lastFrame, pose);
-    // saveFrame(lastFrame);
-    // queueCapture();
   }
 
   cleanCamera();

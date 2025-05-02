@@ -9,7 +9,7 @@
 
 template <typename T> T unwrap(std::optional<T> opt) {
   if (!opt.has_value()) {
-    std::cerr << "Unwrapped None!";
+    std::cout << "Unwrapped None!";
     assert(false);
   }
   return *opt;
@@ -49,14 +49,28 @@ Pose Pose::operator*(const Pose &o) const {
 }
 
 Vector cross(const Vector &a, const Vector &b) {
-    return Vector{
-        a.y * b.z - a.z * b.y,
-        a.z * b.x - a.x * b.z,
-        a.x * b.y - a.y * b.x
-    };
+  return Vector{a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z,
+                a.x * b.y - a.y * b.x};
 }
 
 Vector normalize(const Vector &v) {
-    double length = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-    return Vector{v.x / length, v.y / length, v.z / length};
+  double length = std::sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
+  return Vector{v.x / length, v.y / length, v.z / length};
+}
+
+/// Returns screenLine from the given two points. If piPeriod = true, returns in
+/// angle in [0, M_PI).
+ScreenLine lineFromPoints(const ScreenPosition &p1, const ScreenPosition &p2,
+                          bool piPeriod = true) {
+  auto Δx = (p2).x - (p1).x;
+  auto Δy = (p2).y - (p1).y;
+
+  double angle = std::atan2(Δy, Δx); // Calculate angle of line
+  if (angle < 0 && piPeriod)
+    angle += M_PI;
+
+  double distanceToOrigin =
+      -std::sin(angle) * (p1).x + std::cos(angle) * (p1).y;
+
+  return ScreenLine{angle, distanceToOrigin};
 }

@@ -93,43 +93,50 @@ libcamera::Stream *stream;
 std::unique_ptr<libcamera::Request> request;
 libcamera::FrameBufferAllocator *allocator;
 std::unique_ptr<libcamera::CameraManager> cm;
+bool wantFrame = false;
 
 static void requestComplete(libcamera::Request *request) {
-  std::cout << std::endl
-            << "Request completed: " << request->toString() << std::endl;
+  if (wantFrame) {
+    wantFrame = false;
+    std::cout << std::endl
+              << "Request completed: " << request->toString() << std::endl;
 
-  libcamera::FrameBuffer *buffer = request->findBuffer(stream);
-  const libcamera::FrameMetadata &metadata = buffer->metadata();
+    libcamera::FrameBuffer *buffer = request->findBuffer(stream);
+    const libcamera::FrameMetadata &metadata = buffer->metadata();
 
-  unsigned int nplane = 0;
-  for (const libcamera::FrameMetadata::Plane &plane : metadata.planes()) {
-    std::cout << plane.bytesused;
-    if (++nplane < metadata.planes().size())
-      std::cout << "/";
+    unsigned int nplane = 0;
+    for (const libcamera::FrameMetadata::Plane &plane : metadata.planes()) {
+      std::cout << plane.bytesused;
+      if (++nplane < metadata.planes().size())
+        std::cout << "/";
+    }
+
+    const auto &plane = buffer->planes()[0];
+    size_t length = plane.length;
+    size_t offset = plane.offset;
+
+    // Memory map the buffer
+    uint8_t *XRGB =
+        static_cast<uint8_t *>(mmap(nullptr, length, PROT_READ | PROT_WRITE,
+                                    MAP_SHARED, plane.fd.get(), offset));
+
+    for (int i = 0; i < WIDTH * HEIGHT; ++i) {
+      lastFrame.HSV[i] =
+          rgbToHsv(XRGB[i * 4 + 2], XRGB[i * 4 + 1], XRGB[i * 4]);
+    }
+
+    munmap(XRGB, length);
+
+    // I can't be bothered to do this properly
+    lastFrame.timestamp = std::stoll(request->metadata().get(45).toString());
   }
 
-  const auto &plane = buffer->planes()[0];
-  size_t length = plane.length;
-  size_t offset = plane.offset;
-
-  // Memory map the buffer
-  uint8_t *XRGB =
-      static_cast<uint8_t *>(mmap(nullptr, length, PROT_READ | PROT_WRITE,
-                                  MAP_SHARED, plane.fd.get(), offset));
-
-  for (int i = 0; i < WIDTH * HEIGHT; ++i) {
-    lastFrame.HSV[i] = rgbToHsv(XRGB[i * 4 + 2], XRGB[i * 4 + 1], XRGB[i * 4]);
-  }
-
-  // I can't be bothered to do this properly
-  lastFrame.timestamp = std::stoll(request->metadata().get(45).toString());
-}
-
-void queueCapture() {
   /* Re-queue the Request to the camera. */
   request->reuse(libcamera::Request::ReuseBuffers);
-  camera->queueRequest(request.get());
+  camera->queueRequest(request);
 }
+
+void queueCapture() { wantFrame = true; }
 
 void initializeCamera() {
   cm = std::make_unique<libcamera::CameraManager>();

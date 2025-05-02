@@ -43,7 +43,7 @@ int initializeSerial() {
   cfsetispeed(&tty, baud);
   cfsetospeed(&tty, baud);
 
-  // It is not clear which of these configurations are stricly neccesary.
+  // It is not clear which of these configurations are strictly necessary.
   // However with the ones here it works so we can leave it as is.
   tty.c_cflag &= ~PARENB; // No parity
   tty.c_cflag &= ~CSTOPB; // One stop bit
@@ -54,7 +54,7 @@ int initializeSerial() {
       ~(ICANON | ECHO | ECHOE | ISIG);    // Set non-canonical mode (raw mode)
   tty.c_iflag &= ~(IXON | IXOFF | IXANY); // Disable software flow control
 
-  // This one is for sure neccesary.
+  // This one is for sure necessary.
   // Set non-blocking (read returns if no data can be read atm)
   tty.c_cc[VMIN] = 0;  // Return immediately if no data
   tty.c_cc[VTIME] = 0; // No timeout
@@ -64,6 +64,15 @@ int initializeSerial() {
     std::cerr << "Error setting terminal attributes" << std::endl;
     return 3;
   }
+
+  // Flush any data already received but not read
+  if (tcflush(serial_port, TCIFLUSH) != 0) {
+    std::cerr << "Error flushing serial port input buffer" << std::endl;
+    return 4;
+  }
+
+  std::string message = "6969\n";
+  write(serial_port, message.c_str(), message.length());
 
   initialized = true;
   return 0;
@@ -87,7 +96,7 @@ std::optional<Pose> processArduinoResponse() {
     buf[n] = '\0'; // Null-terminate the received data
     std::string buffer = std::string(buf);
 
-    std::cout << "[ARDUINO]: " << buffer;
+    std::cerr << "[ARDUINO]: " << buffer;
 
     std::string latestPacket;
 

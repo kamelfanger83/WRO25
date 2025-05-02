@@ -7,8 +7,11 @@
 #include <optional>
 #include <vector>
 
+#include "../geo/camera.cpp"
+#include "../geo/coordinates.cpp"
 #include "../structs.h"
 #include "camera.h"
+#include "draw_line.cpp"
 #include "find_color.cpp"
 
 /// This function takes a vector of points which were detected to be of a
@@ -17,8 +20,8 @@
 /// Assumptions: The points outside the field are ment to be already filtered
 /// out.
 std::optional<ScreenLine> findLine(std::vector<Point> points) {
-  if (points.size() < 100) {
-    std::cerr << "Insufficient points to find a line." << std::endl;
+  if (points.size() < 200) {
+    std::cout << "Insufficient points to find a line." << std::endl;
     return {};
   }
 
@@ -53,7 +56,7 @@ std::optional<ScreenLine> findLine(std::vector<Point> points) {
   }
 
   if (lines.size() < targetLineCount) {
-    std::cerr << "The points were too close together, insufficient lines could "
+    std::cout << "The points were too close together, insufficient lines could "
                  "be formed"
               << std::endl;
     return {};
@@ -65,7 +68,7 @@ std::optional<ScreenLine> findLine(std::vector<Point> points) {
             });
 
   int countMax = -1;
-  double maxRangeL, maxRangeR;
+  double maxRangeL = 0., maxRangeR = 0.;
 
   const float MAX_DIF = 0.02;
 
@@ -117,35 +120,11 @@ std::optional<ScreenLine> findLine(std::vector<Point> points) {
   }
 
   if (cnt < 50.) {
-    std::cerr << "Too few lines were in the best angle range." << std::endl;
+    std::cout << "Too few lines were in the best angle range." << std::endl;
     return {};
   }
 
   return ScreenLine{finalAngle, sum / cnt};
-}
-
-/// This function takes a frame and a line and draws the line in the frame in
-/// the given color.
-void drawLineInFrame(Frame &frame, const ScreenLine &Line,
-                     HSVPixel color = {200, 255, 255}) {
-  double x1 = -sin(Line.angle) * Line.distanceToOrigin;
-  double y1 = cos(Line.angle) * Line.distanceToOrigin;
-
-  double xm = tan(Line.angle);
-  for (int x = 0; x < WIDTH; ++x) {
-    int y = std::round(xm * (x - x1) + y1);
-    if (y >= 0 && y < HEIGHT) {
-      frame.HSV[y * WIDTH + x] = color;
-    }
-  }
-
-  double ym = tan(M_PI_2 - Line.angle);
-  for (int y = 0; y < HEIGHT; ++y) {
-    int x = std::round(ym * (y - y1) + x1);
-    if (x >= 0 && x < WIDTH) {
-      frame.HSV[y * WIDTH + x] = color;
-    }
-  }
 }
 
 /// This function takes a frame, a line and a point and says if the point is
@@ -163,7 +142,7 @@ bool isBelow(const ScreenLine &Line, Point &point) {
 }
 
 /// This function takes a frame, a line and a point and says if the point is
-/// right the line.
+/// right of the line.
 bool isRight(const ScreenLine &Line, Point &point) {
 
   double x1 = -sin(Line.angle) * Line.distanceToOrigin;
@@ -180,30 +159,108 @@ struct BorderPointPartition {
   std::vector<Point> right, back, left;
 };
 
-BorderPointPartition findBorderPoints(const Frame &frame) {
+/// Returns the distance between the two angles.
+double angDist(double a, double b) {
+  double diff = a - b;
+  diff = std::fmod(std::fmod(diff, M_PI * 2) + M_PI * 2, M_PI * 2);
+  if (diff < M_PI)
+    return diff;
+  else
+    return M_PI * 2 - diff;
+}
+
+BorderPointPartition findBorderPoints(Frame &frame, const Pose &poseEstimate) {
   BorderPointPartition result;
+
+  Segment segment = inSegmentSlanted(poseEstimate);
+
+  double angleLeft, angleBack, angleRight;
+  Line leftLine = Line::BORDER_OUT_1, backLine = Line::BORDER_OUT_2,
+       rightLine = Line::BORDER_IN_1;
+  switch (segment) {
+  case Segment::SEGMENT_1: {
+    leftLine = Line::BORDER_OUT_1;
+    backLine = Line::BORDER_OUT_2;
+    rightLine = Line::BORDER_IN_1;
+    break;
+  }
+  case Segment::SEGMENT_2: {
+    leftLine = Line::BORDER_OUT_2;
+    backLine = Line::BORDER_OUT_3;
+    rightLine = Line::BORDER_IN_2;
+    break;
+  }
+  case Segment::SEGMENT_3: {
+    leftLine = Line::BORDER_OUT_3;
+    backLine = Line::BORDER_OUT_4;
+    rightLine = Line::BORDER_IN_3;
+    break;
+  }
+  case Segment::SEGMENT_4: {
+    leftLine = Line::BORDER_OUT_4;
+    backLine = Line::BORDER_OUT_1;
+    rightLine = Line::BORDER_IN_4;
+    break;
+  }
+  }
+
+  auto projectedLeft = projectLine(poseEstimate, leftLine, false);
+  if (projectedLeft.has_value()) {
+    angleLeft = std::fmod(projectedLeft->angle + M_PI_2 + M_PI * 2, M_PI * 2);
+  } else {
+    angleLeft = M_PI_4; // default value
+  }
+
+  auto projectedBack = projectLine(poseEstimate, backLine, false);
+  if (projectedBack.has_value()) {
+    angleBack = std::fmod(projectedBack->angle + M_PI_2 + M_PI * 2, M_PI * 2);
+  } else {
+    angleBack = M_PI_2; // default value
+  }
+
+  auto projectedRight = projectLine(poseEstimate, rightLine, false);
+  if (projectedRight.has_value()) {
+    angleRight = std::fmod(projectedRight->angle - M_PI_2 + M_PI * 2, M_PI * 2);
+  } else {
+    angleRight = 3 * M_PI_4; // default value
+  }
+
   for (int x = 0; x < WIDTH; ++x) {
     for (int y = 0; y < HEIGHT; ++y) {
       Point p{x, y};
       if (isBorderPoint(frame, p)) {
         double gradAngle = directionOfGradientAtPoint(p, frame);
-        if (1.5 * M_PI_4 <= gradAngle && gradAngle < 3 * M_PI_4)
-          result.back.push_back(p);
-        else if (-M_PI_4 <= gradAngle && gradAngle < 1.5 * M_PI_4)
+        std::array<double, 4> angDists = {angDist(gradAngle, angleLeft),
+                                          angDist(gradAngle, angleBack),
+                                          angDist(gradAngle, angleRight), 0.3};
+        switch (
+            std::distance(angDists.begin(),
+                          std::min_element(angDists.begin(), angDists.end()))) {
+        case 0: {
           result.left.push_back(p);
-        else if (/* 3 * M_PI_4 <= gradAngle || */ gradAngle < -3 * M_PI_4)
+          break;
+        }
+        case 1: {
+          result.back.push_back(p);
+          break;
+        }
+        case 2: {
           result.right.push_back(p);
+          break;
+        }
+        }
       }
     }
   }
+
   return result;
 }
 
 // WIP
-ScreenLineSet findLines(Frame &frame) {
+ScreenLineSet findLines(Frame &frame, const Pose &poseEstimate) {
   ScreenLineSet lines;
 
-  BorderPointPartition borderPartition = findBorderPoints(frame);
+  BorderPointPartition borderPartition = findBorderPoints(frame, poseEstimate);
 
   colorColor(frame, borderPartition.left, {113, 255, 255});
   colorColor(frame, borderPartition.back, {239, 255, 255});
@@ -246,21 +303,21 @@ void drawScreenLineSet(Frame &frame, ScreenLineSet lines) {
   if (lines.left.has_value())
     drawLineInFrame(frame, *lines.left, {212, 255, 255});
   else
-    std::cerr << "Unfortunately, there was no left line." << std::endl;
+    std::cout << "Unfortunately, there was no left line." << std::endl;
   if (lines.back.has_value())
     drawLineInFrame(frame, *lines.back, {43, 255, 255});
   else
-    std::cerr << "Unfortunately, there was no back line." << std::endl;
+    std::cout << "Unfortunately, there was no back line." << std::endl;
   if (lines.right.has_value())
     drawLineInFrame(frame, *lines.right, {85, 255, 255});
   else
-    std::cerr << "Unfortunately, there was no right line." << std::endl;
+    std::cout << "Unfortunately, there was no right line." << std::endl;
   if (lines.orange.has_value())
     drawLineInFrame(frame, *lines.orange, {127, 255, 255});
   else
-    std::cerr << "Unfortunately, there was no orange line." << std::endl;
+    std::cout << "Unfortunately, there was no orange line." << std::endl;
   if (lines.blue.has_value())
     drawLineInFrame(frame, *lines.blue, {0, 255, 255});
   else
-    std::cerr << "Unfortunately, there was no blue line." << std::endl;
+    std::cout << "Unfortunately, there was no blue line." << std::endl;
 }

@@ -12,11 +12,6 @@ struct Point {
   int y;
 };
 
-struct Segment {
-  Point start;
-  Point end;
-};
-
 /// Goes over a frame and returns a vector containing all the points in the
 /// Frame of a certain color.
 std::vector<Point> mask(const Frame &frame, bool (*is_color)(const HSVPixel)) {
@@ -120,7 +115,7 @@ bool isBlack(const HSVPixel pixel) {
 }
 
 bool isWhite(const HSVPixel pixel) {
-  return pixel.s < int(0.15 * 255) && pixel.v > int(0.5 * 255);
+  return pixel.s < int(0.15 * 255) && pixel.v > int(0.75 * 255);
 }
 
 bool isGreen(const HSVPixel pixel) {

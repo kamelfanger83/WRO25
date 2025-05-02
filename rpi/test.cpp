@@ -34,7 +34,9 @@ int main() {
 
   lastFrame.timestamp += 1; */
 
-  auto screenLines = findLines(lastFrame);
+  Pose pose = {20, 190, M_PI_2};
+
+  auto screenLines = findLines(lastFrame, pose);
 
   saveFrame(lastFrame);
   lastFrame.timestamp += 1;
@@ -45,8 +47,6 @@ int main() {
   lastFrame.timestamp += 1;
 
   // Pose pose = {51.63059936, 150.90123742, M_PI_2};
-
-  Pose pose = {70, 190, M_PI_2 + 0.2};
 
   pose = unwrap(optimizePose(screenLines, pose));
 
