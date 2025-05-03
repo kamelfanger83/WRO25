@@ -48,7 +48,7 @@ int main() {
 
   // Pose pose = {51.63059936, 150.90123742, M_PI_2};
 
-  pose = unwrap(optimizePose(screenLines, pose, pose));
+  pose = unwrap(optimizePose(screenLines, pose, pose)).first;
 
   printPose(pose);
 

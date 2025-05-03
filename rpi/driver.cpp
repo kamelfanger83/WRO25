@@ -20,13 +20,12 @@ struct Mode {
       plan;
 };
 
-int run(Mode startMode) {
-  initializeCamera();
+int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
   initializeSerial();
 
   std::queue<Waypoint> waypoints;
   Mode nextMode = startMode;
-  Pose pose = {50, 150, M_PI_2};
+  Pose pose = startPose;
   Pose lastArduinoPose = {0, 0, 0};
   ControllerState controllerState{0};
 
@@ -66,6 +65,8 @@ int run(Mode startMode) {
       printPose(pose);
       auto screenLines = findLines(lastFrame, pose);
       drawScreenLineSet(lastFrame, screenLines);
+      if (ignoreInner)
+        screenLines.right = {};
       Pose debug;
       auto poset = optimizePose(screenLines, pose, debug);
       drawProjectedLines(lastFrame, debug);
@@ -74,7 +75,7 @@ int run(Mode startMode) {
         std::cout << "AW HELL NAW" << std::endl;
         return -1;
       }
-      pose = *poset;
+      pose = poset->first;
 
       std::cout << "Post visual pose:\n";
       printPose(pose);
@@ -99,8 +100,6 @@ int run(Mode startMode) {
   }
 
   sendCommands({90, 0});
-
-  cleanCamera();
 
   return 0;
 }
