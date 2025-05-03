@@ -3,7 +3,7 @@
 #include "../geo/camera.cpp"
 #include "../structs.h"
 #include "find_color.cpp"
-
+#include "draw_line.cpp"
 /// looks if there is a triffic light and if yes, if it is red or green
 
 /// PRE: frame, pose, unprojected points of the suspected traffic lights
@@ -31,7 +31,7 @@ std::optional<char> checkTrafficLight(Frame &frame, const CoordinateSystem &came
     miny = std::max(miny, 0);
     maxx = std::min(maxx, WIDTH - 1);
     maxy = std::min(maxy, HEIGHT - 1);
-    
+
     int totalPixels = (maxx - minx) * (maxy - miny);
     int redPixels = 0, greenPixels = 0;
 
@@ -51,9 +51,20 @@ std::optional<char> checkTrafficLight(Frame &frame, const CoordinateSystem &came
     }
 
     //CHECK IF totalPixels is enough to say that it is on the frame.
+    drawTrafficLights(frame, minx+1, maxx-1, miny+1, maxy-1, {}); // draw the box around the traffic light
 
     double Threshold = 0.5; // 50% of the pixels have to be red or green to be considered a traffic light
-    if (redPixels / double(totalPixels) > Threshold) return 'r'; // red light
-    if (greenPixels / double(totalPixels) > Threshold) return 'g'; // green light
+    if (redPixels / double(totalPixels) > Threshold){
+
+        drawTrafficLights(frame, minx, maxx, miny, maxy, {255, 255, 255}); // draw the box around the traffic light
+        return 'r'; // red light
+    } 
+    if (greenPixels / double(totalPixels) > Threshold){
+        drawTrafficLights(frame, minx, maxx, miny, maxy, {255/3, 255, 255}); // draw the box around the traffic light
+        return 'g'; // green light
+    } 
+
+    return std::nullopt; // no traffic light found
 
 }
+
