@@ -1,0 +1,52 @@
+#include <optional>
+
+#include "../geo/camera.cpp"
+#include "../structs.h"
+#include "find_color.cpp"
+
+/// looks if there is a triffic light and if yes, if it is red or green
+
+/// PRE: frame, pose, unprojected points of the suspected traffic lights
+
+std::optional<char> checkTrafficLight(Frame &frame, const CoordinateSystem &cameraSystem, const std::vector<Vector> &unprojectedPoints) {
+    // projects every point on the screen and stores it into "points" iff on the screen (= in front of the camera).
+    std::vector<ScreenPosition> points = {};
+
+    for (Vector unprojectedPoint : unprojectedPoints){
+        auto point = projectPoint(cameraSystem, unprojectedPoint);
+        if (point.has_value()) points.push_back(*point);
+    }
+    // WHAT DO WE DO IF THERE ARE FOR EX. 2 POINTS ON THE SCREEN?
+
+    if (points.size() < 8) return std::nullopt; // no point on the screen
+    int maxx = points[0].x, maxy = points[0].y, minx = points[0].x, miny = points[0].y;
+    for (ScreenPosition point : points) {
+        if (point.x > maxx) maxx = point.x;
+        if (point.y > maxy) maxy = point.y;
+        if (point.x < minx) minx = point.x;
+        if (point.y < miny) miny = point.y;
+    }
+    int totalPixels = (maxx - minx) * (maxy - miny);
+    int redPixels = 0, greenPixels = 0;
+
+    /*
+    HOW DO WE KNOW IF THE TRAFFIC LIGHT IS ON THE FRAME AND NOT ONLY ON THE SCREEN?
+
+    adjust totalPixels by counting every pixel in the frame.
+    adjust minx, miny, maxx, maxy (with for example std::max(minx, 0)???)
+    */
+
+    for (int i = minx; i < maxx; ++i) {
+        for (int j = miny; j < maxy; ++j) {
+            if (isRed(frame.HSV[j * WIDTH + i])) ++redPixels; // red light
+            if (isGreen(frame.HSV[j * WIDTH + i])) ++greenPixels; // green light
+        }
+    }
+
+    //CHECK IF totalPixels is enough to say that it is on the frame.
+
+    double Threshold = 0.5; // 50% of the pixels have to be red or green to be considered a traffic light
+    if (redPixels / double(totalPixels) > Threshold) return 'r'; // red light
+    if (greenPixels / double(totalPixels) > Threshold) return 'g'; // green light
+
+}
