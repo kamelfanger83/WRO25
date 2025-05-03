@@ -79,7 +79,8 @@ std::vector<Vector> getTrafficLightCoordinates(TrafficLight tl) {
             { 57.5 , 202.5 , 10},
             { 62.5 , 197.5 , 10},
             { 62.5 , 202.5 , 10}};
-
+        default:
+            return {{-1, -1, -1}, {-1, -1, -1}};
     }
 }
 
