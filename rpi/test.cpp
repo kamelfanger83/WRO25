@@ -7,9 +7,14 @@
 #include "camera/find_line.cpp"
 #include "geo/camera.cpp"
 #include "utils.cpp"
+#include "camera/obstacles.cpp"
+#include "camera/draw_line.cpp"
+#include "geo/coordinatesTrafficlights.cpp"
 
 int main() {
   initializeCamera();
+
+  queueCapture();
 
   while (lastFrame.timestamp == -1) {
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -34,7 +39,7 @@ int main() {
 
   lastFrame.timestamp += 1; */
 
-  Pose pose = {20, 190, M_PI_2};
+  Pose pose = {110, 50, 2.8};
 
   auto screenLines = findLines(lastFrame, pose);
 
@@ -54,7 +59,11 @@ int main() {
 
   drawProjectedLines(lastFrame, pose);
 
+  checkTrafficLight(lastFrame, getCameraSystem(pose) , getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_1));
+
+
   saveFrame(lastFrame);
+  lastFrame.timestamp += 1;
 
   cleanCamera();
 }

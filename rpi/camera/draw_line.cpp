@@ -26,3 +26,25 @@ void drawLineInFrame(Frame &frame, const ScreenLine &Line,
     }
   }
 }
+
+
+// PRE: frame, points (= 4 cornerbox on the screen AND FRAME!!!!  )
+// POST: Draws box (= square) around the trafficlights.
+
+void drawTrafficLights(Frame &frame, int minx, int maxx, int miny,
+                       int maxy, HSVPixel color = {0, 255, 255}) {
+
+  // check if the points are in the frame and not only on the screen
+
+  //upper, lower
+  for (int x = minx; x < maxx; ++x) {
+    frame.HSV[miny * WIDTH + x] = color;
+    frame.HSV[maxy * WIDTH + x] = color;
+  }
+  //right, left
+  for (int y = miny; y < maxy; ++y) {
+    frame.HSV[y * WIDTH + minx] = color;
+    frame.HSV[y * WIDTH + maxx] = color;
+  }
+
+}
