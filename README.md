@@ -1,1 +1,8 @@
-WRO25 consists of building a robot in the category "future engineers".
+# Repository overview
+
+The repository is divided into two folders:
+* arduino
+* rpi
+
+Which contain the code which is run on the Arduino and the Raspberry Pi respectively. Additionally, there are some non code files: 
+* Plan.md containing a plan for 
