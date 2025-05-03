@@ -319,7 +319,7 @@ Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
   double thetaGrad = tangent * diff;
   // Make gradients from constraints with high depth smaller since there
   // distance corresponds to smaller distance on screen.
-  double fac = 1. / std::max(10., depth);
+  double fac = 1. / std::max(20., depth);
   return {diff.x * fac, diff.y * fac, thetaGrad * 0.001 * fac};
 }
 
@@ -334,15 +334,21 @@ std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
                                  const Pose &posePreviousFrame, Pose &debug) {
   auto constraints = getConstraints(screenLines, posePreviousFrame);
   std::cout << "constaints.size() = " << constraints.size() << std::endl;
+  if (constraints.empty()) {
+    std::cout << "No constraints found ;-;. Returning blind pose..."
+              << std::endl;
+    return {posePreviousFrame};
+  }
   Pose pose = posePreviousFrame;
   printPose(pose);
   const float learningRate = 3.;
-  for (int epoch = 0; epoch < 1000; ++epoch) {
+  for (int epoch = 0; epoch < 5000; ++epoch) {
     Pose adjustment{0, 0, 0};
     for (auto constraint : constraints) {
       adjustment = adjustment + getGrad(constraint, pose);
     }
-    pose = pose + adjustment * (-learningRate / float(constraints.size()));
+    pose = pose +
+           adjustment * (-learningRate / std::sqrt(float(constraints.size())));
     if (true) {
       std::cout << "theta: " << pose.theta << ", x: " << pose.x
                 << ", y: " << pose.y << std::endl;

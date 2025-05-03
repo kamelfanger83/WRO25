@@ -20,38 +20,12 @@ struct Mode {
       plan;
 };
 
-std::optional<std::pair<std::queue<Waypoint>, Mode>>
-endMode(const Frame &frame, const Pose &position) {
-  return {};
-}
-
-std::optional<std::pair<std::queue<Waypoint>, Mode>>
-startMode(const Frame &frame, const Pose &position) {
-  std::queue<Waypoint> waypoints;
-  Waypoint startPoint;
-  startPoint.x = position.x;
-  startPoint.y = position.y;
-  /// can play arround in here
-  waypoints.push({50, 228});
-  waypoints.push({228, 250});
-  waypoints.push({250, 72});
-  waypoints.push({78, 50});
-  waypoints.push(startPoint);
-
-  return {std::make_pair(waypoints, Mode{endMode})};
-}
-
-std::optional<std::pair<std::queue<Waypoint>, Mode>>
-endSegmentMode(const Frame &frame, const Pose &position) {
-  return {};
-}
-
-int main() {
+int run(Mode startMode) {
   initializeCamera();
   initializeSerial();
 
   std::queue<Waypoint> waypoints;
-  Mode nextMode = {startMode};
+  Mode nextMode = startMode;
   Pose pose = {50, 150, M_PI_2};
   Pose lastArduinoPose = {0, 0, 0};
   ControllerState controllerState{0};
@@ -98,7 +72,7 @@ int main() {
       saveFrame(lastFrame);
       if (!poset.has_value()) {
         std::cout << "AW HELL NAW" << std::endl;
-        break;
+        return -1;
       }
       pose = *poset;
 

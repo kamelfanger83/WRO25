@@ -35,6 +35,11 @@ void colorColor(Frame &frame, std::vector<Point> points,
   }
 }
 
+/// Returns how much this pixel is not a border pixel. If a black border is used
+/// this returns the brightness. If the blue border is used, it returns the
+/// 255 - saturation.
+double fieldNess(const HSVPixel &pixel) { return 255 - pixel.s; }
+
 /// Gradient function using 5x5 Sobel kernel. Takes a frame and a point and
 /// returns the direction of the gradient at that point.
 double directionOfGradientAtPoint(Point x0, const Frame &frame) {
@@ -64,7 +69,7 @@ double directionOfGradientAtPoint(Point x0, const Frame &frame) {
     for (int j = -2; j <= 2; ++j) {
       HSVPixel pixel = frame.HSV[(y + i) * WIDTH + (x + j)];
 
-      double greyscale = double(pixel.v) / 255.;
+      double greyscale = fieldNess(pixel);
 
       gx += greyscale * Gx[i + 2][j + 2];
       gy += greyscale * Gy[i + 2][j + 2];
