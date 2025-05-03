@@ -10,7 +10,7 @@
 int main() {
     if (initializeSerial()) return 1;
 
-    readArduinoResponse();
+    processArduinoResponse();
 
     // Configure terminal for reading keys
     struct termios oldt, newt;
@@ -26,7 +26,7 @@ int main() {
 
     bool run = true;
     while (run) {
-        readArduinoResponse();
+        processArduinoResponse();
 
         int key = getchar();
         switch (key) {
@@ -40,7 +40,7 @@ int main() {
 
         sendCommands(commands);
 
-        readArduinoResponse();
+        processArduinoResponse();
     }
 
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
