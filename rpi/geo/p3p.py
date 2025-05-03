@@ -109,6 +109,9 @@ def solve_pnp(image_points: np.ndarray,
     projected, _ = cv2.projectPoints(object_points, rvec, tvec,
                                      camera_matrix, dist_coeffs)
     projected = projected.reshape(-1, 2)
+
+    print("Projected points:", projected)
+
     err = np.sqrt(np.mean(np.sum((projected - image_points)**2, axis=1)))
 
     R_mat, _ = cv2.Rodrigues(rvec)
@@ -133,17 +136,17 @@ if __name__ == '__main__':
     ], dtype=np.float64)
 
     image_pts = np.array([
-        [1269, 1073],
-        [3551, 1068],
-        [3178, 2144],
-        [1479, 2125],
-        [820, 1279],
-        [2239, 1070],
+        [1946, 969],
+        [4080, 1008],
+        [3338 , 1756],
+        [2058, 1678],
+        [1590, 1124],
+        [2787, 982],
     ], dtype=np.float64)
 
     width = 4608
     height = 2592
-    fov_deg = 67.7
+    fov_deg = 67.87
 
     # No lens distortion
     dist = np.zeros((4, 1), dtype=np.float64)
