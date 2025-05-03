@@ -17,9 +17,9 @@ startMode(const Frame &frame, const Pose &position) {
   ++roundsCompleted;
 
   waypoints.push({25, 250});
-  waypoints.push({225, 275});
-  waypoints.push({275, 25});
-  waypoints.push({75, 25});
+  waypoints.push({250, 275});
+  waypoints.push({275, 50});
+  waypoints.push({50, 25});
 
   if (roundsCompleted == 2) {
     waypoints.push({startPose.x, startPose.y});
