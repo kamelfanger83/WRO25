@@ -32,7 +32,7 @@ std::optional<ScreenLine> findLine(std::vector<Point> points) {
 
   std::vector<ProbedLine> lines;
 
-  const int distanceThreshold = 100;
+  const int distanceThreshold = 60;
   const int targetLineCount = 2000;
 
   for (int tries = 0; lines.size() < targetLineCount && tries < 10000;
@@ -70,7 +70,7 @@ std::optional<ScreenLine> findLine(std::vector<Point> points) {
   int countMax = -1;
   double maxRangeL = 0., maxRangeR = 0.;
 
-  const float MAX_DIF = 0.02;
+  const float MAX_DIF = 0.04;
 
   for (int i = 0, r = 1; i < int(lines.size()); ++i) {
     if (r == i)
