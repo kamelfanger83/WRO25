@@ -28,7 +28,7 @@ void drawLineInFrame(Frame &frame, const ScreenLine &Line,
 }
 
 
-// PRE: frame, points (= 4 corenterbox on the screen)
+// PRE: frame, points (= 4 cornerbox on the screen AND FRAME!!!!  )
 // POST: Draws box (= square) around the trafficlights.
 
 void drawTrafficLights(Frame &frame, int minx, int maxx, int miny,
