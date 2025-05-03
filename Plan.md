@@ -87,3 +87,50 @@ while (true) {
 
 I bin noned sicher ob i en Mode typ wür mache. Aso mer brucht eigentli nur d'plan funktion für jede mode. Denn chönnt mer easy au eifach en function pointer neh. 
 Update: probably isches au schlauer wenn plan es optional mit waypoints und nextMode returned und none bedütet denn dass es terminal isch.
+
+
+
+
+If we want to determine our position based on 5 lines: outer boundary, inner boundary, back boundary, orange and blue line. That means step 1 is being able to reliably detect the line:
+
+For each color (orange, blue, white, color from outside the boundary – currently blue but eventually black, though that should be changeable easily in this function) a function that takes a pixel and says whether the pixel has that color.
+
+To test that, a function that takes an image and a function that takes a pixel and says whether it is of a certain color, and then overwrites all pixels recognized as that color with some marker color like light green or something, and then saves the image. Then we can place the robot in various places and see whether we're happy with what is recognized as that color and what is not. An example of a C++ function that takes another function as an argument:
+
+
+void call_until_false( bool (*f) (int) ) {
+    for (int i = 0; f(i); ++i);
+}
+For orange and blue that's all, so there we just need to call the function for each pixel. For the boundaries, it's a bit more complicated.
+
+My suggestion there is that for each pixel we check whether in the neighborhood (we could, for example, take a 3x3 area around the pixel) there are some pixels with color from outside the boundary and some white ones. If yes, the pixel counts as a boundary pixel. Then we still need to determine which boundary it belongs to. For that, we can calculate the image gradient (you can look it up online) and then assign it to one of the 3 boundaries based on direction. That means I would make a function that takes an image and returns 3 vectors of points, one for each boundary with all the points we found on it.
+
+Then, based on all the points we found on a line, we want to find a line on the screen that we count as the line. So that we can use the same function for orange, blue, and the boundary, it should simply take a vector of points that should lie on the segment. This either returns a line or not if there aren't enough points to count it as a line. The nicest way to do that is with a std::optional. The algorithm to go from a vector of points to a segment I described in the WhatsApp chat. Basically, repeatedly take 2 random points and calculate the line between them, and then record angle and offset for each of those lines, and then take the one that came up most frequently. I once said that we could maybe use slope and y-intercept, but that's kind of bad, because for example, a line with slope 100 and one with 200 are quite similar, but one with 0 and 1 are very different, yet they’re counted as much more similar. We should probably instead use the angle, i.e. arctangent of the slope, and signed distance to a fixed point, for example the center of the screen. Then, to find the "neighborhood" that appears most frequently, I said you can take the median. But that’s a bit awkward, because if the angle is close to 0, then maybe half are at 0° and half at 179°, and then the median is somehow 90°. You could patch that, but I think a cleaner approach is to find a 5° window or so where the most data points fall into. That can be done with scanline (Google it or ping me). If we assume that there’s only one cluster (which should be a reasonable assumption), we can do this independently for angle and offset and then just take the combination as the line.
+
+To test line detection, it would be nice again to have a function that draws the line onto the frame and then saves it as a PNG.
+
+Then we need to define a coordinate system on the playing field. It doesn’t really matter what we choose, we can just pick something that seems reasonably natural. Then we need to locate all possible lines in that coordinate system. That means we need to determine the start and end coordinates of all boundaries and the orange and blue line. If we choose a somewhat smart coordinate system, these should be fairly nice values. Then we should define some convention in code to identify the lines, for example by numbering them, and then make a function where you can give it a line number and it gives you the 3D start and end point of that line.
+
+We need to measure the so-called intrinsics of the camera. On one hand, we need to check whether the camera has a lot of distortion. If so, that’s kind of a pain and makes things more complicated. But it wouldn’t be the end of the world. If not, great. Then we especially need to measure the FOV (vertical or horizontal doesn’t matter, we can calculate the other with the aspect ratio). In addition, we should measure the tilt angle of the camera on the robot – i.e. the angle it’s looking down at, which is fixed. We also need to measure the height of the camera above the ground, which is also fixed. What we will also assume is fixed is the roll – i.e. whether the camera is rolled. We should quickly verify that it’s 0, otherwise slightly rotate the camera.
+
+A helper we’ll need then is one that, based on a line on the screen, determines a plane that corresponds to that line. So if you imagine unprojecting a line from the screen into 3D, there’s a plane that the points could possibly lie on. We need that plane.
+
+First, we assume that the camera has a known position and rotation. That means we know how the camera is oriented in space. Now, when we draw a line on the screen (for example, a boundary line or the orange/blue line), then that line corresponds to something in the real 3D world.
+
+The first helper is: from a line on the screen, and the position and rotation of the camera, we can determine a plane in the real world that passes through the camera and through this line. This is because a line on the screen represents a set of rays going from the camera out into space — and if we take all these rays together, they define a plane.
+
+So that means we need to make a function where we give it the position and rotation of the camera and a line on the screen, and it gives us a plane in 3D that corresponds to that line.
+
+A second helper is that we then intersect this line’s plane with another plane, namely the one from the boundary or from the orange/blue line.
+
+If that gives more than one intersection point (which is normal if it’s, say, with a boundary plane), then we have to check for the correct one. We could look at the angle between the normals — so that we know which line belongs to which boundary. It’s a bit fiddly, but doable.
+
+In the end, we’ll have a function where we give it a point on the screen, and it gives us where that point is in the real world (of course with some uncertainty), under the assumption that we know which line it belongs to.
+
+And if we have more of those points (e.g. the start and end points of a line), then we can do even more — like determine the orientation of the line in the real world.
+
+That would then help us reconstruct the entire playing field, or at least the parts that are visible.
+
+
+
+
