@@ -143,7 +143,7 @@ bool isBelow(const ScreenLine &Line, Point &point) {
 
 /// This function takes a frame, a line and a point and says if the point is
 /// right of the line.
-bool isRight(const ScreenLine &Line, Point &point) {
+bool isRight(const ScreenLine &Line, const Point &point) {
 
   double x1 = -sin(Line.angle) * Line.distanceToOrigin;
   double y1 = cos(Line.angle) * Line.distanceToOrigin;
@@ -161,6 +161,9 @@ struct BorderPointPartition {
 
 /// Returns the distance between the two angles.
 double angDist(double a, double b) {
+  // special case
+  if (b == -69)
+    return 1e6;
   double diff = a - b;
   diff = std::fmod(std::fmod(diff, M_PI * 2) + M_PI * 2, M_PI * 2);
   if (diff < M_PI)
@@ -208,25 +211,27 @@ BorderPointPartition findBorderPoints(Frame &frame, const Pose &poseEstimate) {
   if (projectedLeft.has_value()) {
     angleLeft = std::fmod(projectedLeft->angle + M_PI_2 + M_PI * 2, M_PI * 2);
   } else {
-    angleLeft = M_PI_4; // default value
+    angleLeft = -69;
   }
 
   auto projectedBack = projectLine(poseEstimate, backLine, false);
   if (projectedBack.has_value()) {
     angleBack = std::fmod(projectedBack->angle + M_PI_2 + M_PI * 2, M_PI * 2);
   } else {
-    angleBack = M_PI_2; // default value
+    angleBack = -69;
   }
 
   auto projectedRight = projectLine(poseEstimate, rightLine, false);
   if (projectedRight.has_value()) {
     angleRight = std::fmod(projectedRight->angle - M_PI_2 + M_PI * 2, M_PI * 2);
   } else {
-    angleRight = 3 * M_PI_4; // default value
+    angleRight = -69;
   }
 
-  for (int x = 0; x < WIDTH; ++x) {
-    for (int y = 0; y < HEIGHT; ++y) {
+  std::vector<Point> nonfits;
+
+  for (int y = 0; y < HEIGHT; ++y) {
+    for (int x = 0; x < WIDTH; ++x) {
       Point p{x, y};
       if (isBorderPoint(frame, p)) {
         double gradAngle = directionOfGradientAtPoint(p, frame);
@@ -248,27 +253,42 @@ BorderPointPartition findBorderPoints(Frame &frame, const Pose &poseEstimate) {
           result.right.push_back(p);
           break;
         }
+        case 3: {
+          nonfits.push_back(p);
+          break;
+        }
         }
       }
     }
   }
 
+  colorColor(frame, nonfits, {0, 0, 0});
+
   return result;
 }
 
-// WIP
 ScreenLineSet findLines(Frame &frame, const Pose &poseEstimate) {
   ScreenLineSet lines;
 
   BorderPointPartition borderPartition = findBorderPoints(frame, poseEstimate);
 
+  lines.left = findLine(borderPartition.left);
+  lines.right = findLine(borderPartition.right);
+  if (lines.right.has_value()) {
+    std::vector<Point> nback;
+    // they are sorted by y, i checked
+    int rminy = borderPartition.right[borderPartition.right.size() / 10].y;
+    for (const auto &p : borderPartition.back) {
+      if (!isRight(*lines.right, p) || p.y < rminy - 100)
+        nback.push_back(p);
+    }
+    borderPartition.back = nback;
+  }
+  lines.back = findLine(borderPartition.back);
+
   colorColor(frame, borderPartition.left, {113, 255, 255});
   colorColor(frame, borderPartition.back, {239, 255, 255});
   colorColor(frame, borderPartition.right, {64, 255, 255});
-
-  lines.left = findLine(borderPartition.left);
-  lines.back = findLine(borderPartition.back);
-  lines.right = findLine(borderPartition.right);
 
   std::vector<Point> orangePoints, bluePoints;
   for (int x = 0; x < WIDTH; ++x) {
@@ -291,6 +311,7 @@ ScreenLineSet findLines(Frame &frame, const Pose &poseEstimate) {
   }
 
   colorColor(frame, orangePoints, {200, 255, 255});
+  colorColor(frame, bluePoints, {200, 0, 255});
 
   lines.blue = findLine(bluePoints);
   lines.orange = findLine(orangePoints);

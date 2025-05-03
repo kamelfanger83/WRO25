@@ -1,5 +1,5 @@
 #include <Servo.h>
-
+#include <util/atomic.h> 
 
 #define PWM_PIN 11
 #define FG_PIN 2
@@ -12,15 +12,15 @@ int targetServo = 84;
 // Positioning variables. Everything is in cm.
 float x = 0, y = 0, theta = 0;
 const float wheelDiam = 5.13;
-volatile unsigned long pulses = 0;
-unsigned long lastUpdatePulses = 0;
+volatile unsigned int pulses = 0;
+bool forward = true;
 
 unsigned long lastPosePrint = 0;
 unsigned long lastServoUpdate =0;
+
 void registerPulse () {
   ++pulses;
 }
-
 
 Servo myservo;
 float predictedTurnRadius(int currentServo){
@@ -33,8 +33,6 @@ float predictedTurnRadius(int currentServo){
  }
  return 1./(a*angle) + b;
 }
-
-
 
 void setup() {
   Serial.begin(115200);
@@ -67,6 +65,12 @@ void loop() {
       Serial.print("New motor speed: ");
       Serial.println(num / 2);
       digitalWrite(DIR_PIN, num >= 0 ? LOW : HIGH);
+      if (num < 0) {
+        forward = false;
+      }
+      if (num > 0) {
+        forward = true;
+      }
       analogWrite(PWM_PIN, 255 - abs(num / 2));
     } else  {
       targetServo = num / 2;
@@ -82,15 +86,19 @@ void loop() {
     myservo.write(actualServo);
     lastServoUpdate = micros();
   }
-  float shaftD = float(pulses - lastUpdatePulses) / 268.;
-  lastUpdatePulses = pulses;
-  
+  int npulses;
+  ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
+    npulses = pulses;
+    pulses = 0;
+  }
+
+  float shaftD = float(npulses) / 268.;
 
   float turnR = predictedTurnRadius(actualServo);
   
   // TODO: consider which back wheel slips how much
   
-  float dTheta = (shaftD * wheelDiam * M_PI) / (turnR + 5.2*(turnR>0 ? 1 : -1));
+  float dTheta = (shaftD * wheelDiam * M_PI * (forward ? 1 : -1)) / (turnR + 5.2*(turnR>0 ? 1 : -1));
  
   // Coordinates are in ICR system. Idk coordinate systems here are a bit of a
   // mess.

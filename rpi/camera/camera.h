@@ -6,8 +6,7 @@
 
 extern Frame lastFrame;
 
-/// Sets up the camera to start capturing frames, also queues first frame to be
-/// captured.
+/// Sets up the camera to start capturing frames.
 void initializeCamera();
 
 /// Queues another frame to be captured.

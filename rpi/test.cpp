@@ -3,13 +3,13 @@
 #include <thread>
 
 #include "camera/camera.h"
+#include "camera/draw_line.cpp"
 #include "camera/find_color.cpp"
 #include "camera/find_line.cpp"
-#include "geo/camera.cpp"
-#include "utils.cpp"
 #include "camera/obstacles.cpp"
-#include "camera/draw_line.cpp"
+#include "geo/camera.cpp"
 #include "geo/coordinatesTrafficlights.cpp"
+#include "utils.cpp"
 
 int main() {
   initializeCamera();
@@ -23,7 +23,6 @@ int main() {
   std::cerr << "We captured an image at: " << lastFrame.timestamp << std::endl;
 
   saveFrame(lastFrame);
-
   lastFrame.timestamp += 1;
 
   /* auto gradFrame = cloneFrame(lastFrame);
@@ -39,7 +38,7 @@ int main() {
 
   lastFrame.timestamp += 1; */
 
-  Pose pose = {110, 50, 2.8};
+  Pose pose = {276.82, 223.887, -7.64652};
 
   auto screenLines = findLines(lastFrame, pose);
 
@@ -53,17 +52,23 @@ int main() {
 
   // Pose pose = {51.63059936, 150.90123742, M_PI_2};
 
+  drawProjectedLines(lastFrame, pose, {205, 255, 166});
+
   pose = unwrap(optimizePose(screenLines, pose, pose)).first;
 
   printPose(pose);
 
-  drawProjectedLines(lastFrame, pose);
-
-  checkTrafficLight(lastFrame, getCameraSystem(pose) , getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_1));
-
+  drawProjectedLines(lastFrame, pose, {43, 255, 255});
 
   saveFrame(lastFrame);
-  lastFrame.timestamp += 1;
+
+  /*
+
+  checkTrafficLight(lastFrame, getCameraSystem(pose),
+                    getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_1));
+
+  saveFrame(lastFrame);
+  lastFrame.timestamp += 1; */
 
   cleanCamera();
 }

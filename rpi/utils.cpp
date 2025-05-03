@@ -23,6 +23,11 @@ Pose Pose::operator*(double f) const {
   return {this->x * f, this->y * f, this->theta * f};
 }
 
+void printPose(const Pose &pose) {
+  std::cout << "Pose(x=" << pose.x << ", y=" << pose.y
+            << ", theta=" << pose.theta << ")" << std::endl;
+}
+
 bool Waypoint::reached(Pose pose) {
   Vector d = {this->x - pose.x, this->y - pose.y, 0};
   float dotp = d * Vector{cos(pose.theta), sin(pose.theta), 0};

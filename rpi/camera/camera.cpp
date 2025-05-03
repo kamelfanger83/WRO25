@@ -47,7 +47,7 @@ Frame cloneFrame(const Frame &frame) {
 
 int frameIndex = 0;
 
-void initializeCamera() { queueCapture(); }
+void initializeCamera() {}
 
 void queueCapture() {
   std::string source_path =

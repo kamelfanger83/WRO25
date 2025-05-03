@@ -90,6 +90,20 @@ std::optional<ScreenLine> projectLine(const Pose &pose, Line line,
 
   auto [s, e] = getStartEndPoints(line);
 
+  bool inRange = false;
+  auto se = e - s;
+  for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
+    Vector v = s * (1. - t) + e * t;
+    if (auto projected = projectPoint(camerasys, v)) {
+      bool ons = projected->x >= 0 && projected->x < WIDTH &&
+                 projected->y >= 0 && projected->y < HEIGHT;
+      inRange |= ons;
+    }
+  }
+
+  if (!inRange)
+    return {};
+
   auto p1 = projectPoint(camerasys, s);
   auto p2 = projectPoint(camerasys, e);
   if (p1.has_value() && p2.has_value()) {
@@ -125,14 +139,12 @@ void drawProjectedLine(Frame &frame, const Pose &pose, Line line,
   auto camerasys = getCameraSystem(pose);
   auto [s, e] = getStartEndPoints(line);
 
-  bool inRange = false;
   auto se = e - s;
   for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
     Vector v = s * (1. - t) + e * t;
     if (auto projected = projectPoint(camerasys, v)) {
       bool ons = projected->x >= 0 && projected->x < WIDTH &&
                  projected->y >= 0 && projected->y < HEIGHT;
-      inRange |= ons;
       if (ons) {
         // draw small circle at projected point
         int x = std::round(projected->x);
@@ -150,21 +162,17 @@ void drawProjectedLine(Frame &frame, const Pose &pose, Line line,
     }
   }
 
-  if (inRange)
-    // Unwrapping is fine because we know that if the line is in range, surely
-    // one point has to be in front of the camera.
-    drawLineInFrame(frame, unwrap(projectLine(pose, line)), color);
+  auto screenLine = projectLine(pose, line);
+  if (screenLine.has_value())
+    drawLineInFrame(frame, *screenLine, color);
 }
 
-void drawProjectedLines(Frame &frame, Pose &pose) {
+void drawProjectedLines(Frame &frame, Pose &pose, HSVPixel color) {
 
-  std::vector<std::pair<std::array<Line, 4>, HSVPixel>> linesColors{
-      {outerLines, {180, 255, 30}},
-      {innerLines, {180, 255, 255}},
-      {blueLines, {180, 255, 255}},
-      {orangeLines, {0, 255, 255}}};
+  std::vector<std::array<Line, 4>> allLines{outerLines, innerLines, blueLines,
+                                            orangeLines};
 
-  for (auto [lines, color] : linesColors) {
+  for (auto lines : allLines) {
     for (auto line : lines) {
       drawProjectedLine(frame, pose, line, color);
     }
@@ -228,45 +236,48 @@ std::vector<Vector> matchBoardLine(const ScreenLine &screenLine,
   CoordinateSystem cameraSystemPreviousFrame =
       getCameraSystem(posePreviousFrame);
   std::vector<Vector> points;
-  double bestAv = 1e9;
+  double bestDiff = 1e20;
   Line bLine = Line::BORDER_OUT_1;
   for (long unsigned int i = 0; i < candidates.size(); ++i) {
     auto [s, e] = getStartEndPoints(candidates[i]);
     auto se = e - s;
-    double sum = 0;
     std::vector<Vector> tpoints;
-    for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
+    for (double t = 0; t < 1.; t += 5. / std::sqrt(se * se)) {
       Vector v = s * (1. - t) + e * t;
       if (auto projected = projectPoint(cameraSystemPreviousFrame, v)) {
         if (projected->x >= 0 && projected->x < WIDTH && projected->y >= 0 &&
             projected->y < HEIGHT) {
-          sum += std::pow(projected->x * -sin(screenLine.angle) +
-                              projected->y * cos(screenLine.angle) -
-                              screenLine.distanceToOrigin,
-                          2);
           tpoints.push_back(v);
         }
       }
     }
-    if (tpoints.size() < 3)
+    if (tpoints.empty()) {
       continue;
-    double average = sum / double(tpoints.size());
-    if (average < bestAv) {
-      bestAv = average;
+    }
+    auto projected =
+        unwrap(projectLine(posePreviousFrame, candidates[i], true));
+    double diff = std::fmod(screenLine.angle - projected.angle + M_PI, M_PI);
+    double rdiff;
+    if (diff > M_PI_2)
+      rdiff = M_PI - diff;
+    else
+      rdiff = diff;
+    if (rdiff < bestDiff) {
+      bestDiff = rdiff;
       points = tpoints;
       bLine = candidates[i];
     }
   }
   // TODO: tweak this number
-  if (bestAv < 1e4) {
+  if (bestDiff < 0.25) {
     std::cout << "Matched " << screenLineName << " to " << int(bLine)
-              << " with average = " << bestAv << std::endl;
+              << " with average = " << bestDiff << std::endl;
     return points;
   } else {
     std::cout << "Wasn't able to find a line which makes sufficient amount of "
                  "sense for "
               << screenLineName << ". Best would have been " << int(bLine)
-              << " with average = " << bestAv << std::endl;
+              << " with average = " << bestDiff << std::endl;
     return {};
   }
 }
@@ -320,12 +331,7 @@ Pose getGrad(const std::pair<ScreenLine, Vector> &constraint,
   // Make gradients from constraints with high depth smaller since there
   // distance corresponds to smaller distance on screen.
   double fac = 1. / std::max(20., depth);
-  return {diff.x * fac, diff.y * fac, thetaGrad * 0.001 * fac};
-}
-
-void printPose(const Pose &pose) {
-  std::cout << "Pose(x=" << pose.x << ", y=" << pose.y
-            << ", theta=" << pose.theta << ")" << std::endl;
+  return {diff.x * fac, diff.y * fac, thetaGrad * 0.0001 * fac};
 }
 
 /// Uses gradient descent to find the pose for which the given constraints are
@@ -340,19 +346,31 @@ optimizePose(const ScreenLineSet &screenLines, const Pose &posePreviousFrame,
               << std::endl;
     return {{posePreviousFrame, 1e6}};
   }
+  // We check whether there is only a single screen line. In that case, we add
+  // loss for staying close to the starting position.
+  bool singleScreenLine = true;
+  for (auto [l, v] : constraints) {
+    if (l.angle != constraints[0].first.angle)
+      singleScreenLine = false;
+  }
   Pose pose = posePreviousFrame;
   printPose(pose);
-  const float learningRate = 3.;
-  for (int epoch = 0; epoch < 5000; ++epoch) {
+  const float learningRate = 0.2;
+  for (int epoch = 0; epoch < 2000; ++epoch) {
     Pose adjustment{0, 0, 0};
     for (auto constraint : constraints) {
       adjustment = adjustment + getGrad(constraint, pose);
     }
-    pose = pose +
-           adjustment * (-learningRate / std::sqrt(float(constraints.size())));
-    if (true) {
+    double norm =
+        std::sqrt(std::pow(adjustment.x, 2) + std::pow(adjustment.y, 2) +
+                  std::pow(adjustment.theta / 0.01, 2));
+    if (singleScreenLine) {
+      // adjustment = adjustment + (pose + (posePreviousFrame * -1)) * 0.0001;
+    }
+    pose = pose + adjustment * (-learningRate / std::max(norm, 0.1));
+    if (epoch % 200 == 0) {
       std::cout << "theta: " << pose.theta << ", x: " << pose.x
-                << ", y: " << pose.y << std::endl;
+                << ", y: " << pose.y << "\tnorm: " << norm << std::endl;
     }
   }
   double endLoss = 0;
@@ -363,7 +381,7 @@ optimizePose(const ScreenLineSet &screenLines, const Pose &posePreviousFrame,
   std::cout << "final pose loss: " << endLoss << std::endl;
   debug = pose;
   // TODO: tweak this number.
-  if (endLoss < 50.) {
+  if (endLoss < 10.) {
     return {{pose, endLoss}};
   } else {
     std::cout

@@ -32,7 +32,7 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
   long long lastTimeStamp = -1;
 
   double blindError = 1e6;
-  Commands commands;
+  Commands commands{84, 0};
 
   while (true) {
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
@@ -42,7 +42,7 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
       auto diffPose = *arduinoPose / lastArduinoPose;
       blindError +=
           std::sqrt(diffPose.x * diffPose.x + diffPose.y * diffPose.y) +
-          100 * std::abs(diffPose.theta);
+          50 * std::abs(diffPose.theta);
       pose = pose * diffPose;
       lastArduinoPose = *arduinoPose;
     }
@@ -52,7 +52,7 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
       commands.speed = 0;
       sendCommands(commands);
 
-      std::this_thread::sleep_for(std::chrono::milliseconds(200));
+      std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
       lastTimeStamp = lastFrame.timestamp;
       queueCapture();
@@ -61,15 +61,21 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
       }
       std::cout << "Captured a frame at: " << lastFrame.timestamp << std::endl;
 
+      saveFrame(lastFrame);
+      lastFrame.timestamp += 1;
+
       std::cout << "Pre visual pose:\n";
       printPose(pose);
       auto screenLines = findLines(lastFrame, pose);
       drawScreenLineSet(lastFrame, screenLines);
       if (ignoreInner)
         screenLines.right = {};
-      Pose debug;
+
+      drawProjectedLines(lastFrame, pose, {205, 255, 166});
+      Pose debug = pose;
       auto poset = optimizePose(screenLines, pose, debug);
-      drawProjectedLines(lastFrame, debug);
+      drawProjectedLines(lastFrame, debug, {43, 255, 255});
+
       saveFrame(lastFrame);
       if (!poset.has_value()) {
         std::cout << "AW HELL NAW" << std::endl;

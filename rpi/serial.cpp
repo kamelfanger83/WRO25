@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cassert>
+#include <chrono>
 #include <cstring>
 #include <errno.h>
 #include <fcntl.h>
@@ -8,6 +9,7 @@
 #include <optional>
 #include <regex>
 #include <termios.h>
+#include <thread>
 #include <unistd.h>
 
 #include "structs.h"
@@ -70,6 +72,9 @@ int initializeSerial() {
     std::cerr << "Error flushing serial port input buffer" << std::endl;
     return 4;
   }
+
+  // Sleep to make sure arduino is ready.
+  std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
   std::string message = "6969\n";
   write(serial_port, message.c_str(), message.length());

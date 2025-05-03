@@ -1,4 +1,6 @@
 #include "camera/camera.h"
+#include "camera/find_color.cpp"
+#include "camera/find_line.cpp"
 #include "driver.cpp"
 #include <cmath>
 
@@ -14,12 +16,20 @@ std::optional<std::pair<std::queue<Waypoint>, Mode>>
 startMode(const Frame &frame, const Pose &position) {
   std::queue<Waypoint> waypoints;
 
+  std::cout << "Startpose: ";
+  printPose(startPose);
+
   ++roundsCompleted;
 
-  waypoints.push({25, 250});
-  waypoints.push({250, 275});
-  waypoints.push({275, 50});
-  waypoints.push({50, 25});
+  if (roundsCompleted == 0) {
+    startPose = position;
+    waypoints.push({startPose.x, 250});
+  } else {
+    waypoints.push({30, 250});
+  }
+  waypoints.push({250, 270});
+  waypoints.push({270, 50});
+  waypoints.push({50, 30});
 
   if (roundsCompleted == 2) {
     waypoints.push({startPose.x, startPose.y});
@@ -51,6 +61,8 @@ int main() {
   for (auto startCandidate : startCandidates) {
     auto screenLines = findLines(lastFrame, startCandidate);
 
+    drawScreenLineSet(lastFrame, screenLines);
+
     Pose pose = startCandidate;
     auto poset = optimizePose(screenLines, pose, pose);
 
@@ -63,6 +75,9 @@ int main() {
   }
 
   startPose = bestPose;
+
+  drawProjectedLines(lastFrame, startPose, {43, 255, 255});
+  saveFrame(lastFrame);
 
   run({startMode}, bestPose, true);
 
