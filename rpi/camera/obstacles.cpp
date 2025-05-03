@@ -7,7 +7,7 @@
 /// looks if there is a triffic light and if yes, if it is red or green
 
 /// PRE: frame, pose, unprojected points of the suspected traffic lights
-
+// POST: returns 'r' if red, 'g' if green, std::nullopt if no traffic light is found
 std::optional<char> checkTrafficLight(Frame &frame, const CoordinateSystem &cameraSystem, const std::vector<Vector> &unprojectedPoints) {
     // projects every point on the screen and stores it into "points" iff on the screen (= in front of the camera).
     std::vector<ScreenPosition> points = {};
@@ -26,6 +26,12 @@ std::optional<char> checkTrafficLight(Frame &frame, const CoordinateSystem &came
         if (point.x < minx) minx = point.x;
         if (point.y < miny) miny = point.y;
     }
+
+    minx = std::max(minx, 0); // adjust minx, miny, maxx, maxy to be in the frame
+    miny = std::max(miny, 0);
+    maxx = std::min(maxx, WIDTH - 1);
+    maxy = std::min(maxy, HEIGHT - 1);
+    
     int totalPixels = (maxx - minx) * (maxy - miny);
     int redPixels = 0, greenPixels = 0;
 
@@ -35,6 +41,7 @@ std::optional<char> checkTrafficLight(Frame &frame, const CoordinateSystem &came
     adjust totalPixels by counting every pixel in the frame.
     adjust minx, miny, maxx, maxy (with for example std::max(minx, 0)???)
     */
+
 
     for (int i = minx; i < maxx; ++i) {
         for (int j = miny; j < maxy; ++j) {
