@@ -37,12 +37,12 @@ else()
 endif()
 
 add_executable(camera_test test.cpp camera/camera.cpp geo/constants.cpp)
-add_executable(main main.cpp camera/camera.cpp geo/constants.cpp)
+add_executable(openChallenge openChallenge.cpp camera/camera.cpp geo/constants.cpp)
 
 # Link to libcamera if available
 if(WITH_LIBCAMERA)
     target_compile_definitions(camera_test PRIVATE USE_LIBCAMERA)
     target_link_libraries(camera_test PkgConfig::LIBCAMERA)
-    target_compile_definitions(main PRIVATE USE_LIBCAMERA)
-    target_link_libraries(main PkgConfig::LIBCAMERA)
+    target_compile_definitions(openChallenge  PRIVATE USE_LIBCAMERA)
+    target_link_libraries(openChallenge PkgConfig::LIBCAMERA)
 endif()

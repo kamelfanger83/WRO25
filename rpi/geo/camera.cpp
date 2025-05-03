@@ -330,14 +330,15 @@ void printPose(const Pose &pose) {
 
 /// Uses gradient descent to find the pose for which the given constraints are
 /// satisfied as well as possible.
-std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
-                                 const Pose &posePreviousFrame, Pose &debug) {
+std::optional<std::pair<Pose, double>>
+optimizePose(const ScreenLineSet &screenLines, const Pose &posePreviousFrame,
+             Pose &debug) {
   auto constraints = getConstraints(screenLines, posePreviousFrame);
   std::cout << "constaints.size() = " << constraints.size() << std::endl;
   if (constraints.empty()) {
     std::cout << "No constraints found ;-;. Returning blind pose..."
               << std::endl;
-    return {posePreviousFrame};
+    return {{posePreviousFrame, 1e6}};
   }
   Pose pose = posePreviousFrame;
   printPose(pose);
@@ -354,15 +355,16 @@ std::optional<Pose> optimizePose(const ScreenLineSet &screenLines,
                 << ", y: " << pose.y << std::endl;
     }
   }
-  double totalLoss = 0;
+  double endLoss = 0;
   for (auto constraint : constraints) {
-    totalLoss += loss(constraint, pose);
+    endLoss += loss(constraint, pose);
   }
-  std::cout << "final pose loss: " << totalLoss << std::endl;
+  endLoss /= float(constraints.size());
+  std::cout << "final pose loss: " << endLoss << std::endl;
   debug = pose;
   // TODO: tweak this number.
-  if (totalLoss < 1000.) {
-    return {pose};
+  if (endLoss < 50.) {
+    return {{pose, endLoss}};
   } else {
     std::cout
         << "No pose which makes a sufficient amount of sense could be found"
