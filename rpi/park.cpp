@@ -86,7 +86,7 @@ void unpark(){
     std::cout << "reset blind" << std::endl;
 
     //Pose pose = {0, 0, 0};
-    Commands commands;
+    Commands commands {84, 0};
 
     setAngle(commands, 0);
 
@@ -104,20 +104,11 @@ void unpark(){
     setAngle(commands, base_angle);
 
     resetBlind();
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     std::cout << "reached end" << std::endl;
 }
 
 void park(){
     resetBlind();
     resetBlind();
-}
-
-int main() {
-    initializeSerial();
-
-    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
-
-    processArduinoResponse();
-
-    unpark();
 }

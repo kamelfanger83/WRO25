@@ -175,8 +175,8 @@ Vector vectorInSegment(Segment seg, Vector poseInFirst) {
 }
 
 
-Waypoint waypointInSegment(Segment s, Waypoint w){
-  Vector v(w.x, w.y, 0.0);
+Waypoint wayPointInSegment(Segment s, Waypoint w){
+  Vector v {w.x, w.y, 0.0};
   v = vectorInSegment(s, v);
 
   w.x = v.x;
@@ -218,4 +218,5 @@ Segment nextSegment(Segment s){
   if(s == Segment::SEGMENT_4){
     return Segment::SEGMENT_1;
   }
+  return Segment::SEGMENT_1;
 }

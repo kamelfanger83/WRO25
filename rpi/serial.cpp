@@ -79,7 +79,7 @@ int initializeSerial() {
   }
 
   // Sleep to make sure arduino is ready.
-  std::this_thread::sleep_for(std::chrono::milliseconds(500));
+  std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
   resetBlind();
 
@@ -90,21 +90,27 @@ int initializeSerial() {
 /// Reads data sent from Arduino and prints it to stdout. Additionally looks for
 /// poses reported by the Arduino and updates arduinoPose.
 std::optional<Pose> processArduinoResponse() {
+  std::string buffer;
+
   char buf[2048];
-  int n = read(serial_port, buf, sizeof(buf) - 1);
-
-  if (n < 0) {
-    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-      // No data available right now; return without printing.
+  int n = 2047;
+  while(n == 2047) {
+    n = read(serial_port, buf, sizeof(buf) - 1);
+    std::cout << "n=" <<n << std::endl;
+    if (n < 0) {
+      if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // No data available right now; return without printing.
+        return {};
+      }
+      std::cerr << "Error reading from the serial port." << std::endl;
       return {};
+    } else if (n > 0) {
+      buf[n] = '\0'; // Null-terminate the received data
+      buffer += std::string(buf);
     }
-    std::cerr << "Error reading from the serial port." << std::endl;
-    return {};
-  } else if (n > 0) {
+  }
 
-    buf[n] = '\0'; // Null-terminate the received data
-    std::string buffer = std::string(buf);
-
+  if (!buffer.empty()) {
     std::cerr << "[ARDUINO]: " << buffer;
 
     std::string latestPacket;
@@ -128,9 +134,7 @@ std::optional<Pose> processArduinoResponse() {
 
         return {{x, y, theta}};
       }
-    } else {
-      return {};
-    }
+    } 
   }
   return {};
 }

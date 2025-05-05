@@ -16,7 +16,7 @@
 #include "camera/obstacles.cpp"
 #include "geo/coordinatesTrafficlights.cpp"
 #include "park.cpp"
-
+#include "driver.cpp"
 
 
 std::optional<char> checkTrafficLightInSegment(Frame &frame, Segment s, Pose &position, TrafficLight tl){
@@ -35,11 +35,7 @@ checkTrafficLight(Frame &frame, const CoordinateSystem &cameraSystem,
 
 bool flipped = false;
 
-struct Mode {
-  std::function<std::optional<std::pair<std::queue<Waypoint>, Mode>>(
-      Frame &, const Pose &)>
-      plan;
-};
+
 
 std::optional<std::pair<std::queue<Waypoint>, Mode>>
 endMode(Frame &frame, const Pose &position) {
@@ -52,31 +48,33 @@ startMode(Frame &frame, const Pose &position) {
   std::queue<Waypoint> waypoints;
 
 /// three case, no traffic light in middle, red light, green light;
-//function to leave the parking spot. 
-unpark();
+
 
 if(!(checkTrafficLight(frame, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())){
-  waypoints.push({});
-  waypoints.push({50, 150});
-  return {{waypoints, Mode{modeFromMiddle}}};
-}else if((checkTrafficLight(frame, getCameraSystem(position),  getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)))=='r'){
-  waypoints.push({});
-  waypoints.push({});
-  waypoints.push({});
+  waypoints.push({45, 150});
+  waypoints.push({50, 170});
+  return {{waypoints, Mode{endMode}}};
+  //return {{waypoints, Mode{modeFromMiddle}}};
+}else if((checkTrafficLight(frame, getCameraSystem(position),  getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4))).value()=='r'){
+  waypoints.push({60, 120});
+  waypoints.push({65, 135});
+  waypoints.push({80, 150});
   waypoints.push({80, 200});
-  return {{waypoints, Mode{modeFromEndRight}}};
+  return {{waypoints, Mode{endMode}}};
+  //return {{waypoints, Mode{modeFromEndRight}}};
 }else{
-  waypoints.push({});
-  waypoints.push({})
-  waypoints.push({20, 200});
-  waypoints.push({30, 228});
-  return {{waypoints, Mode{modeFromEndLeft}}};
+  waypoints.push({30, 130});
+  waypoints.push({20, 150});
+  waypoints.push({35, 200});
+  waypoints.push({45, 228});
+  return {{waypoints, Mode{endMode}}};
+  //return {{waypoints, Mode{modeFromEndLeft}}};
 }
 }
 
 
 /// mode from the middle, 
-std::optional<std::pair<std::queue<Waypoint>, Mode>> 
+/*std::optional<std::pair<std::queue<Waypoint>, Mode>> 
 modeFromMiddle(Frame &frame, const Pose &position){
 
   /// cases: on position 5 or on position 6. left or right.
@@ -84,11 +82,12 @@ modeFromMiddle(Frame &frame, const Pose &position){
  std::queue<Waypoint> waypoints;
 
  if(!(checkTrafficLightInSegment(frame, curr, position, TrafficLight::TRAFFICLIGHT_5).has_value() &&
-    !(checkTrafficLightInSegment(frame, curr, position, TrafficLight::TRAFFICLIGHT_6)).has_value()){
-  waypoints.push(wayPointInSegment(curr, {20, 200}));
-  waypoints.push(wayPointInSegment(curr, {30, 228}))
-}
+    !(checkTrafficLightInSegment(frame, curr, position, TrafficLight::TRAFFICLIGHT_6)).has_value())){
 
+  waypoints.push(wayPointInSegment(curr, {20, 200}));
+  waypoints.push(wayPointInSegment(curr, {30, 228}));
+
+  return {{waypoints, Mode{modeFromEndLeft}}};
 }
 
 /// mode from front right, 
@@ -136,3 +135,19 @@ modeFromEndRight(Frame, &frame, const Pose &position){
   }
 }
 
+}*/
+
+int main() {
+  initializeCamera();
+  initializeSerial();
+
+  processArduinoResponse();
+  
+  unpark();
+  
+  run({startMode},{20, 120, M_PI_4} , false);
+
+  cleanCamera();
+
+  return 0;
+}

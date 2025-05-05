@@ -44,6 +44,7 @@ startMode(const Frame &frame, const Pose &position) {
 
 int main() {
   initializeCamera();
+  initializeSerial();
 
   captureFrameBlocking();
 

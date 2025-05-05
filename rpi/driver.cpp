@@ -16,13 +16,11 @@
 
 struct Mode {
   std::function<std::optional<std::pair<std::queue<Waypoint>, Mode>>(
-      const Frame &, const Pose &)>
+       Frame &, const Pose &)>
       plan;
 };
 
 int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
-  initializeSerial();
-
   std::queue<Waypoint> waypoints;
   Mode nextMode = startMode;
   Pose pose = startPose;
