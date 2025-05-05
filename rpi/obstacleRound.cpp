@@ -103,35 +103,35 @@ modeFromEndRight(Frame, &frame, const Pose &position){
   assert (!(first.has_value() && second.has_value()));   
   
   if (!(first.has_value() || second.has_value())){
-    waypoints.push({70, 70});
-    waypoints.push({50, 95});
-    waypoints.push({50, 100});
+    waypoints.push(waypointInSegment(current, {70, 70}));
+    waypoints.push(waypointInSegment(current, {50, 95}));
+    waypoints.push(waypointInSegment(current, {50, 100}));
     return {{waypoints, Mode{modeFromFirstLine}}};
 
   } else if (first.has_value() && *first == 'r'){
-    waypoints.push({70, 100});
-    waypoints.push({50, 145});
-    waypoints.push({50, 150});
+    waypoints.push(waypointInSegment(current, {70, 100}));
+    waypoints.push(waypointInSegment(current, {50, 145}));
+    waypoints.push(waypointInSegment(current, {50, 150}));
     return {{waypoints, Mode{modeFromMiddle}}};
 
   } else if (first.has_value() && *first == 'g'){
-    waypoints.push({50, 50});
-    waypoints.push({20, 100});
-    waypoints.push({50, 145});
-    waypoints.push({50, 150});
+    waypoints.push(waypointInSegment(current, {50, 50}));
+    waypoints.push(waypointInSegment(current, {20, 100}));
+    waypoints.push(waypointInSegment(current, {50, 145}));
+    waypoints.push(waypointInSegment(current, {50, 150}));
     return {{waypoints, Mode{modeFromMiddle}}};
 
   } else if (second.has_value() && *second == 'r'){
-    waypoints.push({80, 100});
-    waypoints.push({50, 145});
-    waypoints.push({50, 150});
+    waypoints.push(waypointInSegment(current, {80, 100}));
+    waypoints.push(waypointInSegment(current, {50, 145}));
+    waypoints.push(waypointInSegment(current, {50, 150}));
     return {{waypoints, Mode{modeFromMiddle}}};
 
   } else if (second.has_value() && *second == 'g'){
-    waypoints.push({40, 60});
-    waypoints.push({30, 100});
-    waypoints.push({50, 145});
-    waypoints.push({50, 150});
+    waypoints.push(waypointInSegment(current, {40, 60}));
+    waypoints.push(waypointInSegment(current, {30, 100}));
+    waypoints.push(waypointInSegment(current, {50, 145}));
+    waypoints.push(waypointInSegment(current, {50, 150}));
     return {{waypoints, Mode{modeFromMiddle}}};
   }
 }
