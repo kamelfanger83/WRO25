@@ -37,20 +37,18 @@ endMode(const Frame &frame, const Pose &position) {
 
 std::optional<std::pair<std::queue<Waypoint>, Mode>>
 startMode(const Frame &frame, const Pose &position) { 
-  //function to leave the parking spot. 
 
+  Frame copy = frame;
   std::queue<Waypoint> waypoints;
-  Waypoint startPoint;
-  startPoint.x = position.x;
-  startPoint.y = position.y;
+
 /// three case, no traffic light in middle, red light, green light;
+//function to leave the parking spot. 
 
-
-if(!(checkTrafficLight(frame, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())){
+if(!(checkTrafficLight(copy, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())){
   waypoints.push({});
   waypoints.push({50, 150});
   return {{waypoints, Mode{modeFromMiddle}}};
-}else if((checkTrafficLight(frame, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())=='r'){
+}else if((checkTrafficLight(copy, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())=='r'){
   waypoints.push({});
   waypoints.push({});
   waypoints.push({});
@@ -61,7 +59,15 @@ if(!(checkTrafficLight(frame, getCameraSystem(position), getTrafficLightCoordina
   waypoints.push({})
   waypoints.push({20, 200});
   waypoints.push({30, 228});
-
+s
   return {{waypoints, Mode{modefromEndLeft}}};
 }
 }
+
+
+/// mode from the middle, 
+std::optional<std:::pair<std::queue<Waypoints> Mode>> 
+modeFromMiddle(const Frame, &frame, const Pose &position){
+  
+}
+
