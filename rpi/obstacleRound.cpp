@@ -19,7 +19,7 @@
 
 
 
-std::optional<char> checkTrafficLightinSegment(Frame &frame, Segment s, Pose &position, TrafficLight tl){
+std::optional<char> checkTrafficLightInSegment(Frame &frame, Segment s, Pose &position, TrafficLight tl){
   auto coords = getTrafficLightCoordinates(tl);
   for(Vector &corner : coords){
     corner = vectorInSegment(s,corner);
@@ -81,9 +81,13 @@ modeFromMiddle(Frame &frame, const Pose &position){
 
   /// cases: on position 5 or on position 6. left or right.
  Segment curr = inSegment(position);
+ std::queue<Waypoint> waypoints;
 
- if(!(checkTrafficLight(frame, getCameraSystem(position), poseInSegment(getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_5)).has_value()&&
-)
+ if(!(checkTrafficLightInSegment(frame, curr, position, TrafficLight::TRAFFICLIGHT_5).has_value() &&
+    !(checkTrafficLightInSegment(frame, curr, position, TrafficLight::TRAFFICLIGHT_6)).has_value()){
+  waypoints.push(wayPointInSegment(curr, {20, 200}));
+  waypoints.push(wayPointInSegment(curr, {30, 228}))
+}
 
 }
 
