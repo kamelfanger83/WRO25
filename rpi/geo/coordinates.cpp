@@ -175,7 +175,7 @@ Vector vectorInSegment(Segment seg, Vector poseInFirst) {
 }
 
 
-Waypoint wayPointInSegment(Segment s, Waypoint w){
+Waypoint waypointInSegment(Segment s, Waypoint w){
   Vector v(w.x, w.y, 0.0);
   v = vectorInSegment(s, v);
 
