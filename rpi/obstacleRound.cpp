@@ -94,12 +94,13 @@ modeFromMiddle(Frame &frame, const Pose &position){
 /// mode from front right, 
 std::optional<std:::pair<std::queue<Waypoints> Mode>> 
 modeFromEndRight(Frame, &frame, const Pose &position){
-  
+
+  Segment current = inSegment(position);
   std::queue<Waypoint> waypoints;
-  auto first = checkTrafficLight(frame, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_1))
-  auto second = checkTrafficLight(frame, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_2))
+  auto first = checkTrafficLightInSegment(frame, current, position, TrafficLight::TRAFFICLIGHT_1)
+  auto second = checkTrafficLightInSegment(frame, current, position, TrafficLight::TRAFFICLIGHT_2)
   
-  assert (!(first.has_value() && second.has_value());   
+  assert (!(first.has_value() && second.has_value()));   
   
   if (!(first.has_value() || second.has_value())){
     waypoints.push({70, 70});
@@ -133,4 +134,5 @@ modeFromEndRight(Frame, &frame, const Pose &position){
     waypoints.push({50, 150});
     return {{waypoints, Mode{modeFromMiddle}}};
   }
+}
 
