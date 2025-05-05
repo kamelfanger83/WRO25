@@ -58,6 +58,7 @@ struct Pose {
 struct Waypoint {
   double x;
   double y;
+  bool visualPosition;
   // double theta; Brauchen wir maybe später
 
   /// returns if a position has reached the waypoint

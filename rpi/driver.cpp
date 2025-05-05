@@ -83,17 +83,14 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
       lastArduinoPose = *arduinoPose;
     }
 
-    if (blindError > 100. &&
-        std::sqrt(std::pow(waypoints.front().x - pose.x, 2) +
-                  std::pow(waypoints.front().y - pose.y, 2)) > 30.) {
-      positionVisual();
-    }
-
     if (waypoints.front().reached(pose)) {
+      if (waypoints.front().visualPosition || waypoints.size() == 1) {
+        positionVisual();
+      }
       waypoints.pop();
     }
+
     if (waypoints.empty()) {
-      positionVisual();
       auto result = nextMode.plan(lastFrame, pose);
       if (!result.has_value()) {
         break;
