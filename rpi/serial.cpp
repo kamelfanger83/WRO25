@@ -22,6 +22,11 @@ const int baud = B115200;
 int serial_port;
 bool initialized = false;
 
+void resetBlind() {
+  std::string message = "6969\n";
+  write(serial_port, message.c_str(), message.length());
+}
+
 /// Returns 0 if successful, returns nonzero number otherwise.
 int initializeSerial() {
   if (initialized)
@@ -76,8 +81,7 @@ int initializeSerial() {
   // Sleep to make sure arduino is ready.
   std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-  std::string message = "6969\n";
-  write(serial_port, message.c_str(), message.length());
+  resetBlind();
 
   initialized = true;
   return 0;
