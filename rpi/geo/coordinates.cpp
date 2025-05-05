@@ -150,7 +150,7 @@ Segment inSegment(Pose pose) {
 
 /// takes a 3d Position which we consider to be in the first Segment
 //  and a Segment in which the position gets transformed intos
-Vector poseInSegment(Segment seg, Vector poseInFirst) {
+Vector vectorInSegment(Segment seg, Vector poseInFirst) {
   Vector result;
   if (seg == Segment::SEGMENT_1) {
     result = poseInFirst;
@@ -192,4 +192,20 @@ Segment inSegmentSlanted(Pose pose) {
   }
   assert(false);
   return SEGMENT_1;
+}
+
+
+Segment nextSegment(Segment s){
+  if(s == Segment::SEGMENT_1){
+    return Segment::SEGMENT_2;
+  }
+  if(s == Segment::SEGMENT_2){
+    return Segment::SEGMENT_3;
+  }
+  if(s == Segment::SEGMENT_3){
+    return Segment::SEGMENT_4;
+  }
+  if(s == Segment::SEGMENT_4){
+    return Segment::SEGMENT_1;
+  }
 }

@@ -15,7 +15,18 @@
 #include "structs.h"
 #include "camera/obstacles.cpp"
 #include "geo/coordinatesTrafficlights.cpp"
+#include "park.cpp"
 
+
+
+std::optional<char> checkTrafficLightinSegment(Frame &frame, Segment s, Pose &position, TrafficLight tl){
+  auto coords = getTrafficLightCoordinates(tl);
+  for(Vector &corner : coords){
+    corner = vectorInSegment(s,corner);
+  }
+  return checkTrafficLight(frame, getCameraSystem(position), coords);
+
+}
 ///have traffic light check function in obstacles.cpp signature: 
 /*std::optional<char>
 checkTrafficLight(Frame &frame, const CoordinateSystem &cameraSystem,
@@ -26,29 +37,29 @@ bool flipped = false;
 
 struct Mode {
   std::function<std::optional<std::pair<std::queue<Waypoint>, Mode>>(
-      const Frame &, const Pose &)>
+      Frame &, const Pose &)>
       plan;
 };
 
 std::optional<std::pair<std::queue<Waypoint>, Mode>>
-endMode(const Frame &frame, const Pose &position) {
+endMode(Frame &frame, const Pose &position) {
   return {};
 }
 
 std::optional<std::pair<std::queue<Waypoint>, Mode>>
-startMode(const Frame &frame, const Pose &position) { 
+startMode(Frame &frame, const Pose &position) { 
 
-  Frame copy = frame;
   std::queue<Waypoint> waypoints;
 
 /// three case, no traffic light in middle, red light, green light;
 //function to leave the parking spot. 
+unpark();
 
-if(!(checkTrafficLight(copy, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())){
+if(!(checkTrafficLight(frame, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())){
   waypoints.push({});
   waypoints.push({50, 150});
   return {{waypoints, Mode{modeFromMiddle}}};
-}else if((checkTrafficLight(copy, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())=='r'){
+}else if((checkTrafficLight(frame, getCameraSystem(position),  getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)))=='r'){
   waypoints.push({});
   waypoints.push({});
   waypoints.push({});
@@ -59,15 +70,20 @@ if(!(checkTrafficLight(copy, getCameraSystem(position), getTrafficLightCoordinat
   waypoints.push({})
   waypoints.push({20, 200});
   waypoints.push({30, 228});
-s
-  return {{waypoints, Mode{modefromEndLeft}}};
+  return {{waypoints, Mode{modeFromEndLeft}}};
 }
 }
 
 
 /// mode from the middle, 
-std::optional<std:::pair<std::queue<Waypoints> Mode>> 
-modeFromMiddle(const Frame, &frame, const Pose &position){
-  
+std::optional<std::pair<std::queue<Waypoint>, Mode>> 
+modeFromMiddle(Frame &frame, const Pose &position){
+
+  /// cases: on position 5 or on position 6. left or right.
+ Segment curr = inSegment(position);
+
+ if(!(checkTrafficLight(frame, getCameraSystem(position), poseInSegment(getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_5)).has_value()&&
+)
+
 }
 
