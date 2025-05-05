@@ -174,6 +174,16 @@ Vector vectorInSegment(Segment seg, Vector poseInFirst) {
   return result;
 }
 
+
+Waypoint wayPointInSegment(Segment s, Waypoint w){
+  Vector v(w.x, w.y, 0.0);
+  v = vectorInSegment(s, v);
+
+  w.x = v.x;
+  w.y = v.y;
+  return w;
+}
+
 Segment inSegmentSlanted(Pose pose) {
   double x = pose.x;
   double y = pose.y;
