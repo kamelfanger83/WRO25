@@ -120,9 +120,12 @@ static void requestComplete(libcamera::Request *request) {
         static_cast<uint8_t *>(mmap(nullptr, length, PROT_READ | PROT_WRITE,
                                     MAP_SHARED, plane.fd.get(), offset));
 
-    for (int i = 0; i < WIDTH * HEIGHT; ++i) {
-      lastFrame.HSV[i] =
-          rgbToHsv(XRGB[i * 4 + 2], XRGB[i * 4 + 1], XRGB[i * 4]);
+    for (int y = 0; y < HEIGHT; ++y) {
+      for (int x = 0; x < WIDTH; ++x) {
+        int i = (y * WIDTH + (WIDTH - 1 - x)) * 4;
+        lastFrame.HSV[y * WIDTH + x] =
+            rgbToHsv(XRGB[i + 2], XRGB[i + 1], XRGB[i]);
+      }
     }
 
     munmap(XRGB, length);

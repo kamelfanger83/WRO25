@@ -14,6 +14,8 @@
 #include "serial.cpp"
 #include "structs.h"
 
+bool flipped = false;
+
 bool trafficlight(Pose position) {
   /// assume vguerins function is here
 }

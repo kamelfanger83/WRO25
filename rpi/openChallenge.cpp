@@ -4,6 +4,8 @@
 #include "driver.cpp"
 #include <cmath>
 
+bool flipped = false;
+
 std::optional<std::pair<std::queue<Waypoint>, Mode>>
 endMode(const Frame &frame, const Pose &position) {
   return {};
@@ -43,11 +45,9 @@ startMode(const Frame &frame, const Pose &position) {
 int main() {
   initializeCamera();
 
-  long long lastTimeStamp = lastFrame.timestamp;
-  queueCapture();
-  while (lastTimeStamp == lastFrame.timestamp) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(1));
-  }
+  captureFrameBlocking();
+
+  flipped = isFlipped(lastFrame);
 
   std::cout << "Captured first frame at: " << lastFrame.timestamp << std::endl;
 

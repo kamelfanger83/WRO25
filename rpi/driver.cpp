@@ -41,11 +41,7 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
 
     std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-    lastTimeStamp = lastFrame.timestamp;
-    queueCapture();
-    while (lastTimeStamp == lastFrame.timestamp) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
+    captureFrameBlocking();
     std::cout << "Captured a frame at: " << lastFrame.timestamp << std::endl;
 
     saveFrame(lastFrame);

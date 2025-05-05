@@ -42,6 +42,44 @@ std::array<Line, 4> blueLines = {Line::BLUE_1, Line::BLUE_2, Line::BLUE_3,
 /// function that takes a line and returns the start and end Cordinates of said
 /// line
 std::pair<Vector, Vector> getStartEndPoints(Line line) {
+  if (flipped) {
+    switch (line) {
+    case Line::BLUE_1: {
+      line = Line::ORANGE_1;
+      break;
+    }
+    case Line::BLUE_2: {
+      line = Line::ORANGE_2;
+      break;
+    }
+    case Line::BLUE_3: {
+      line = Line::ORANGE_3;
+      break;
+    }
+    case Line::BLUE_4: {
+      line = Line::ORANGE_4;
+      break;
+    }
+    case Line::ORANGE_1: {
+      line = Line::BLUE_1;
+      break;
+    }
+    case Line::ORANGE_2: {
+      line = Line::BLUE_2;
+      break;
+    }
+    case Line::ORANGE_3: {
+      line = Line::BLUE_3;
+      break;
+    }
+    case Line::ORANGE_4: {
+      line = Line::BLUE_4;
+      break;
+    }
+    default:
+      break;
+    }
+  }
   switch (line) {
   // Coordinates outer walls
   case Line::BORDER_OUT_1:

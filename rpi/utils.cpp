@@ -1,9 +1,13 @@
 #pragma once
 
 #include <cassert>
+#include <chrono>
 #include <cmath>
 #include <iostream>
+#include <thread>
 
+#include "camera/camera.h"
+#include "camera/find_color.cpp"
 #include "geo/utils.cpp"
 #include "structs.h"
 
@@ -78,4 +82,41 @@ ScreenLine lineFromPoints(const ScreenPosition &p1, const ScreenPosition &p2,
       -std::sin(angle) * (p1).x + std::cos(angle) * (p1).y;
 
   return ScreenLine{angle, distanceToOrigin};
+}
+
+void captureFrameBlocking() {
+  long long lastTimeStamp = lastFrame.timestamp;
+  queueCapture();
+  while (lastTimeStamp == lastFrame.timestamp) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+  }
+}
+
+bool isFlipped(const Frame &frame) {
+  auto orangePoints = mask(frame, isOrange);
+  auto bluePoints = mask(frame, isBlue);
+
+  Point orangeCOM{0, 0}, blueCOM{0, 0};
+  for (const auto &orangeP : orangePoints) {
+    orangeCOM.x += orangeP.x;
+    orangeCOM.y += orangeP.y;
+  }
+  for (const auto &blueP : bluePoints) {
+    blueCOM.x += blueP.x;
+    blueCOM.y += blueP.y;
+  }
+
+  orangeCOM.x /= orangePoints.size();
+  orangeCOM.y /= orangePoints.size();
+  blueCOM.x /= bluePoints.size();
+  blueCOM.y /= bluePoints.size();
+
+  bool flipped = orangeCOM.y < blueCOM.y;
+
+  if (flipped)
+    std::cout << "We are going counterclockwisely" << std::endl;
+  else
+    std::cout << "We are going clockwisely" << std::endl;
+
+  return flipped;
 }

@@ -7,6 +7,10 @@
 #define WIDTH 1920
 #define HEIGHT 1080
 
+/// Holds whether the robot goes around counterclockwise and thus the image and
+/// everything should be flipped.
+extern bool flipped;
+
 /// Represents either a position in 3D space (Ortsvektor) or just a vector
 /// without or with another intended startpoint.
 struct Vector {

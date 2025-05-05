@@ -31,7 +31,7 @@ Commands getCommands(const Pose &pose, const Waypoint &waypoint,
   // Our handles angles counterintuitively. Maybe change this in
   // serial.cpp such that everything above 90 is a left turn and everything
   // below is a right turn?
-  angle_command = std::max(0, std::min(170, angle_command));
+  angle_command = std::max(0, std::min(168, angle_command));
 
   int speed_command = base_speed; //  - std::abs(steering); // Has to be
                                   //  calibrated with the vehicle

@@ -137,17 +137,20 @@ std::optional<Pose> processArduinoResponse() {
 
 /// Sends updates to servo angle and motor speed to the Arduino.
 /// Acceptable ranges:
-///     - 0 <= angle <= 170
+///     - 0 <= angle <= 168
 ///     - -255 <= speed <= 255
 /// Returns 0 if successful, returns nonzero number otherwise.
 int sendCommands(Commands commands) {
-  if (commands.angle < 0 || commands.angle > 170) {
+  if (commands.angle < 0 || commands.angle > 168) {
     std::cerr << "Invalid angle" << std::endl;
     return 1;
   }
   if (commands.speed < -255 || commands.speed > 255) {
     std::cerr << "Invalid speed" << std::endl;
     return 2;
+  }
+  if (flipped) {
+    commands.angle = 168 - commands.angle;
   }
   // Prepare message: odd numbers for servo commands, even for motor commands
   std::string message = std::to_string(commands.angle * 2 + 1) + "\n" +
