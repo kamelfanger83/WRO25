@@ -122,7 +122,11 @@ static void requestComplete(libcamera::Request *request) {
 
     for (int y = 0; y < HEIGHT; ++y) {
       for (int x = 0; x < WIDTH; ++x) {
-        int i = (y * WIDTH + (WIDTH - 1 - x)) * 4;
+        int i;
+        if (flipped)
+          i = (y * WIDTH + (WIDTH - 1 - x)) * 4;
+        else
+          i = (y * WIDTH + x) * 4;
         lastFrame.HSV[y * WIDTH + x] =
             rgbToHsv(XRGB[i + 2], XRGB[i + 1], XRGB[i]);
       }

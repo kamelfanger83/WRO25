@@ -13,10 +13,11 @@
 #include "getCommands/getCommands.cpp"
 #include "serial.cpp"
 #include "structs.h"
+#include "utils.cpp"
 
 struct Mode {
   std::function<std::optional<std::pair<std::queue<Waypoint>, Mode>>(
-       Frame &, const Pose &)>
+      Frame &, const Pose &)>
       plan;
 };
 
@@ -26,8 +27,6 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
   Pose pose = startPose;
   Pose lastArduinoPose = {0, 0, 0};
   ControllerState controllerState{0};
-
- 
 
   double blindError = 1e6;
   Commands commands{84, 0};
@@ -81,14 +80,18 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
       lastArduinoPose = *arduinoPose;
     }
 
+    bool capturedFrame = false;
     if (waypoints.front().reached(pose)) {
-      if (waypoints.front().visualPosition || waypoints.size() == 1) {
+      if (waypoints.front().visualPosition) {
+        capturedFrame = true;
         positionVisual();
       }
       waypoints.pop();
     }
 
     if (waypoints.empty()) {
+      if (!capturedFrame)
+        captureFrameBlocking();
       auto result = nextMode.plan(lastFrame, pose);
       if (!result.has_value()) {
         break;

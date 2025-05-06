@@ -1,114 +1,111 @@
 #pragma once
 
-#include <iostream>
 #include <chrono>
+#include <iostream>
 #include <thread>
 
-#include "structs.h"
 #include "serial.cpp"
-
+#include "structs.h"
 
 // direction 1 --> forward
 // direction 2 --> backward
-void moveX(Commands& commands, double threshold, bool dir){
+void moveX(Commands &commands, double threshold, bool dir) {
 
+  if (dir) {
+    commands.speed = 50;
+  } else {
+    commands.speed = -30;
+  }
+  sendCommands(commands);
+
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    auto pose = processArduinoResponse();
     if (dir) {
-        commands.speed = 50;
+      if (pose.has_value() && pose->x > threshold) {
+        commands.speed = 0;
+        sendCommands(commands);
+        std::cout << "moved to x = " << pose->x << std::endl;
+        break;
+      }
     } else {
-        commands.speed = -30;
+      if (pose.has_value() && pose->x < threshold) {
+        commands.speed = 0;
+        sendCommands(commands);
+        std::cout << "moved to x = " << pose->x << std::endl;
+        break;
+      }
     }
-    sendCommands(commands);
-
-    while (true){
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        auto pose = processArduinoResponse();
-        if (dir){
-            if (pose.has_value() && pose->x > threshold){
-                commands.speed = 0;
-                sendCommands(commands);
-                std::cout << "moved to x = " << pose->x << std::endl;
-                break;
-            }
-        } else {
-            if (pose.has_value() && pose->x < threshold){
-                commands.speed = 0;
-                sendCommands(commands);
-                std::cout << "moved to x = " << pose->x << std::endl;
-                break;
-            } 
-        }
-    }
+  }
 }
 
-void moveY(Commands& commands, double threshold, bool dir){
+void moveY(Commands &commands, double threshold, bool dir) {
 
+  if (dir) {
+    commands.speed = 50;
+  } else {
+    commands.speed = -30;
+  }
+  sendCommands(commands);
+
+  while (true) {
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    auto pose = processArduinoResponse();
     if (dir) {
-        commands.speed = 50;
+      if (pose.has_value() && pose->y < threshold) {
+        commands.speed = 0;
+        sendCommands(commands);
+        std::cout << "moved to y = " << pose->y << std::endl;
+        break;
+      }
     } else {
-        commands.speed = -30;
+      if (pose.has_value() && pose->y > threshold) {
+        commands.speed = 0;
+        sendCommands(commands);
+        std::cout << "moved to y = " << pose->y << std::endl;
+        break;
+      }
     }
-    sendCommands(commands);
-
-    while (true){
-        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        auto pose = processArduinoResponse();
-        if (dir){
-            if (pose.has_value() && pose->y < threshold){
-                commands.speed = 0;
-                sendCommands(commands);
-                std::cout << "moved to y = " << pose->y << std::endl;
-                break;
-            }
-        } else {
-            if (pose.has_value() && pose->y > threshold){
-                commands.speed = 0;
-                sendCommands(commands);
-                std::cout << "moved to y = " << pose->y << std::endl;
-                break;
-            } 
-        }
-    }
+  }
 }
 
-void setAngle(Commands& commands, int angle){
-    commands.angle = angle;
-    sendCommands(commands);
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    std::cout << "set angle to " << angle << std::endl;
+void setAngle(Commands &commands, int angle) {
+  commands.angle = angle;
+  sendCommands(commands);
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  std::cout << "set angle to " << angle << std::endl;
 }
 
+void unpark() {
 
-void unpark(){
+  const double base_angle = 84;
 
-    const double base_angle = 84;
+  resetBlind();
+  std::cout << "reset blind" << std::endl;
 
-    resetBlind();
-    std::cout << "reset blind" << std::endl;
+  // Pose pose = {0, 0, 0};
+  Commands commands{84, 0};
 
-    //Pose pose = {0, 0, 0};
-    Commands commands {84, 0};
+  setAngle(commands, 0);
 
-    setAngle(commands, 0);
+  moveX(commands, 9, 1);
 
-    moveX(commands, 9, 1);
+  setAngle(commands, 140);
 
-    setAngle(commands, 140);
+  moveY(commands, -6.5, 0);
 
-    moveY(commands, -6.5, 0);
+  setAngle(commands, 0);
 
-    setAngle(commands, 0);
+  moveY(commands, -15, 1);
 
-    moveY(commands, -15, 1);
+  setAngle(commands, base_angle);
 
-
-    setAngle(commands, base_angle);
-
-    resetBlind();
-    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    std::cout << "reached end" << std::endl;
+  // resetBlind();
+  // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+  std::cout << "reached end" << std::endl;
 }
 
-void park(){
-    resetBlind();
-    resetBlind();
+void park() {
+  resetBlind();
+  resetBlind();
 }

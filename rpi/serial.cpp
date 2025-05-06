@@ -94,9 +94,8 @@ std::optional<Pose> processArduinoResponse() {
 
   char buf[2048];
   int n = 2047;
-  while(n == 2047) {
+  while (n == 2047) {
     n = read(serial_port, buf, sizeof(buf) - 1);
-    std::cout << "n=" <<n << std::endl;
     if (n < 0) {
       if (errno == EAGAIN || errno == EWOULDBLOCK) {
         // No data available right now; return without printing.
@@ -134,7 +133,7 @@ std::optional<Pose> processArduinoResponse() {
 
         return {{x, y, theta}};
       }
-    } 
+    }
   }
   return {};
 }
