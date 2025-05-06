@@ -27,7 +27,7 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
   Pose lastArduinoPose = {0, 0, 0};
   ControllerState controllerState{0};
 
-  long long lastTimeStamp = -1;
+ 
 
   double blindError = 1e6;
   Commands commands{84, 0};

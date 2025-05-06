@@ -51,22 +51,22 @@ startMode(Frame &frame, const Pose &position) {
 
 
 if(!(checkTrafficLight(frame, getCameraSystem(position), getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4)).has_value())){
-  waypoints.push({45, 150});
-  waypoints.push({50, 170});
+  waypoints.push({45, 150, true});
+  waypoints.push({50, 170, true});
   return {{waypoints, Mode{endMode}}};
   //return {{waypoints, Mode{modeFromMiddle}}};
 }else if((checkTrafficLight(frame, getCameraSystem(position),  getTrafficLightCoordinates(TrafficLight::TRAFFICLIGHT_4))).value()=='r'){
-  waypoints.push({60, 120});
-  waypoints.push({65, 135});
-  waypoints.push({80, 150});
-  waypoints.push({80, 200});
+  waypoints.push({60, 120, false});
+  waypoints.push({65, 135, false});
+  waypoints.push({80, 150, true});
+  waypoints.push({80, 200, true});
   return {{waypoints, Mode{endMode}}};
   //return {{waypoints, Mode{modeFromEndRight}}};
 }else{
-  waypoints.push({30, 130});
-  waypoints.push({20, 150});
-  waypoints.push({35, 200});
-  waypoints.push({45, 228});
+  waypoints.push({30, 130, true});
+  waypoints.push({20, 150, true});
+  waypoints.push({35, 200, true});
+  waypoints.push({45, 228, true});
   return {{waypoints, Mode{endMode}}};
   //return {{waypoints, Mode{modeFromEndLeft}}};
 }
