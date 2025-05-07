@@ -95,8 +95,8 @@ std::optional<ScreenLine> projectLine(const Pose &pose, Line line,
   for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
     Vector v = s * (1. - t) + e * t;
     if (auto projected = projectPoint(camerasys, v)) {
-      bool ons = projected->x >= 0 && projected->x < WIDTH &&
-                 projected->y >= 0 && projected->y < HEIGHT;
+      bool ons = projected->x >= -WIDTH / 10 && projected->x < 1.1 * WIDTH &&
+                 projected->y >= -HEIGHT / 10 && projected->y < 1.1 * HEIGHT;
       inRange |= ons;
     }
   }
@@ -269,7 +269,7 @@ std::vector<Vector> matchBoardLine(const ScreenLine &screenLine,
     }
   }
   // TODO: tweak this number
-  if (bestDiff < 0.25) {
+  if (bestDiff < 0.15) {
     std::cout << "Matched " << screenLineName << " to " << int(bLine)
               << " with average = " << bestDiff << std::endl;
     return points;

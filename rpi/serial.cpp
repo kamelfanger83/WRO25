@@ -81,10 +81,23 @@ int initializeSerial() {
   // Sleep to make sure arduino is ready.
   std::this_thread::sleep_for(std::chrono::milliseconds(2000));
 
-  resetBlind();
-
   initialized = true;
   return 0;
+}
+
+void waitForGo() {
+  char buf[2048];
+  while (true) {
+    int n = read(serial_port, buf, sizeof(buf) - 1);
+    if (n > 0) {
+      buf[n] = '\0';
+      std::string msg(buf);
+      if (msg.find("GO!") != std::string::npos) {
+        break;
+      }
+    }
+  }
+  std::cout << "Recieved GO!" << std::endl;
 }
 
 /// Reads data sent from Arduino and prints it to stdout. Additionally looks for

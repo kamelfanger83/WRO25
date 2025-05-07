@@ -9,7 +9,10 @@
 #include "camera/obstacles.cpp"
 #include "geo/camera.cpp"
 #include "geo/coordinatesTrafficlights.cpp"
+#include "structs.h"
 #include "utils.cpp"
+
+bool flipped = false;
 
 int main() {
   initializeCamera();

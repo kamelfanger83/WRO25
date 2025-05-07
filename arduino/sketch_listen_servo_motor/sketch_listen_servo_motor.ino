@@ -5,6 +5,7 @@
 #define FG_PIN 2
 #define DIR_PIN 9
 #define SERVO_PIN 6
+#define START_PIN 3
 
 int actualServo = 84;
 int targetServo = 84;
@@ -38,6 +39,7 @@ void setup() {
   Serial.begin(115200);
   pinMode(DIR_PIN, OUTPUT); // direction control PIN 10 with direction wire
   pinMode(PWM_PIN, OUTPUT); // PWM PIN 11 with PWM wire
+  pinMode(START_PIN, INPUT_PULLUP);
   myservo.attach(SERVO_PIN);
   myservo.write(actualServo);
 
@@ -48,7 +50,10 @@ void setup() {
 
   // Send a ready signal after initialization
   Serial.println("READY");
-  
+
+  while(digitalRead(START_PIN) == HIGH);
+
+  Serial.println("GO!");
 }
 
 void loop() {

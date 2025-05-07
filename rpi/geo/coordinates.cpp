@@ -158,25 +158,24 @@ Vector vectorInSegment(Segment seg, Vector poseInFirst) {
   if (seg == Segment::SEGMENT_2) {
     result.x = poseInFirst.y;
     result.y = 300 - poseInFirst.x;
-    result.z = 0;
+    result.z = poseInFirst.z;
   }
   if (seg == Segment::SEGMENT_3) {
     result.x = 300 - poseInFirst.x;
     result.y = 300 - poseInFirst.y;
-    result.z = 0;
+    result.z = poseInFirst.z;
   }
   if (seg == Segment::SEGMENT_4) {
     result.x = 300 - poseInFirst.y;
     result.y = poseInFirst.x;
-    result.z = 0;
+    result.z = poseInFirst.z;
   }
 
   return result;
 }
 
-
-Waypoint wayPointInSegment(Segment s, Waypoint w){
-  Vector v {w.x, w.y, 0.0};
+Waypoint wayPointInSegment(Segment s, Waypoint w) {
+  Vector v{w.x, w.y, 0.0};
   v = vectorInSegment(s, v);
 
   w.x = v.x;
@@ -204,18 +203,17 @@ Segment inSegmentSlanted(Pose pose) {
   return SEGMENT_1;
 }
 
-
-Segment nextSegment(Segment s){
-  if(s == Segment::SEGMENT_1){
+Segment nextSegment(Segment s) {
+  if (s == Segment::SEGMENT_1) {
     return Segment::SEGMENT_2;
   }
-  if(s == Segment::SEGMENT_2){
+  if (s == Segment::SEGMENT_2) {
     return Segment::SEGMENT_3;
   }
-  if(s == Segment::SEGMENT_3){
+  if (s == Segment::SEGMENT_3) {
     return Segment::SEGMENT_4;
   }
-  if(s == Segment::SEGMENT_4){
+  if (s == Segment::SEGMENT_4) {
     return Segment::SEGMENT_1;
   }
   return Segment::SEGMENT_1;

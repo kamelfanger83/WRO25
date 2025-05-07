@@ -100,7 +100,7 @@ std::vector<Point> gradientPoints(const Frame &frame, double lowerBound,
 /// Returns whether a pixel is considered to have a specific color rather than
 /// some mix or some shade of grey.
 bool isColor(const HSVPixel pixel) {
-  return pixel.s > int(0.20 * 255) && pixel.v > int(0.45 * 255);
+  return pixel.s > int(0.35 * 255) && pixel.v > int(0.35 * 255);
 }
 
 bool isBlue(const HSVPixel pixel) {
@@ -116,7 +116,7 @@ bool isOrange(const HSVPixel pixel) {
 bool isBlack(const HSVPixel pixel) {
   // return pixel.v < int(0.2 * 255);
   return int(190 / 360. * 255) <= pixel.h && pixel.h <= int(215 / 360. * 255) &&
-         isColor(pixel);
+         pixel.s > int(0.35 * 255) && pixel.v > int(0.40 * 255);
 }
 
 bool isWhite(const HSVPixel pixel) {
@@ -124,7 +124,7 @@ bool isWhite(const HSVPixel pixel) {
 }
 
 bool isGreen(const HSVPixel pixel) {
-  return int(95 / 360. * 255) <= pixel.h && pixel.h <= int(130 / 360. * 255) &&
+  return int(85 / 360. * 255) <= pixel.h && pixel.h <= int(130 / 360. * 255) &&
          isColor(pixel);
 }
 

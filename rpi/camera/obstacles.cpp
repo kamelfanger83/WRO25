@@ -58,8 +58,7 @@ checkTrafficLight(Frame &frame, const CoordinateSystem &cameraSystem,
   drawTrafficLights(frame, minx + 1, maxx - 1, miny + 1, maxy - 1,
                     {}); // draw the box around the traffic light
 
-  double Threshold = 0.15; // 50% of the pixels have to be red or green to be
-                           // considered a traffic light
+  double Threshold = 0.15;
   if (redPixels > greenPixels && redPixels / double(totalPixels) > Threshold) {
 
     drawTrafficLights(frame, minx, maxx, miny, maxy,
