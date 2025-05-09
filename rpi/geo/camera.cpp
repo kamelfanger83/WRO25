@@ -239,7 +239,6 @@ matchBoardLine(ScreenLine screenLine, Pose posePreviousFrame,
   bool isColor = screenLineName == "orange" || screenLineName == "blue";
   double padding = 0.;
   if (isColor) {
-    screenLine.angle -= 0.05;
     padding = .25;
   }
   CoordinateSystem cameraSystemPreviousFrame =
@@ -262,6 +261,9 @@ matchBoardLine(ScreenLine screenLine, Pose posePreviousFrame,
         }
       }
     }
+    if (isColor) 
+      std::cout << "Checking " << screenLineName << " line " << int(candidates[i])
+                << " with " << tpoints.size() << " points." << std::endl;
     auto projected =
         projectLine(posePreviousFrame, candidates[i], true, padding);
     if (!projected.has_value())
@@ -280,7 +282,7 @@ matchBoardLine(ScreenLine screenLine, Pose posePreviousFrame,
     }
   }
   double limit = 0.3;
-  if (screenLineName == "blue" || screenLineName == "orange")
+  if (isColor)
     limit = 0.15;
   if (bestDiff < limit) {
     std::cout << "Matched " << screenLineName << " to " << int(bLine)
@@ -318,8 +320,30 @@ getConstraints(const ScreenLineSet &screenLines,
       constraints.push_back({screenLine, p});
     }
   };
-  matchAddConstraints(screenLines.blue, blueLines, "blue");
-  matchAddConstraints(screenLines.orange, orangeLines, "orange");
+  std::array<Line, 4> blueOptions = blueLines;
+  std::array<Line, 4> orangeOptions = orangeLines;
+  Segment seg = inSegmentSlanted(posePreviousFrame);
+  switch (seg) {
+  case Segment::SEGMENT_1:
+    std::fill(blueOptions.begin(), blueOptions.end(), Line::BLUE_2);
+    std::fill(orangeOptions.begin(), orangeOptions.end(), Line::ORANGE_2);
+    break;
+  case Segment::SEGMENT_2:
+    std::fill(blueOptions.begin(), blueOptions.end(), Line::BLUE_3);
+    std::fill(orangeOptions.begin(), orangeOptions.end(), Line::ORANGE_3);
+    break;
+  case Segment::SEGMENT_3:
+    std::fill(blueOptions.begin(), blueOptions.end(), Line::BLUE_4);
+    std::fill(orangeOptions.begin(), orangeOptions.end(), Line::ORANGE_4);
+    break;
+  case Segment::SEGMENT_4:
+    std::fill(blueOptions.begin(), blueOptions.end(), Line::BLUE_1);
+    std::fill(orangeOptions.begin(), orangeOptions.end(), Line::ORANGE_1);
+    break;
+  }
+
+  matchAddConstraints(screenLines.blue, blueOptions, "blue");
+  matchAddConstraints(screenLines.orange, orangeOptions, "orange");
   matchAddConstraints(screenLines.left, outerLines, "left");
   matchAddConstraints(screenLines.back, outerLines, "back");
   matchAddConstraints(screenLines.right, innerLines, "right");
