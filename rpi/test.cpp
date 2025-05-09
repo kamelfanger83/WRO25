@@ -41,7 +41,7 @@ int main() {
 
   lastFrame.timestamp += 1; */
 
-  Pose pose = {276.82, 223.887, -7.64652};
+  Pose pose = {58.2709, 42.8098, -4.15276};
 
   auto screenLines = findLines(lastFrame, pose);
 

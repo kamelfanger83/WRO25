@@ -85,7 +85,8 @@ std::optional<ScreenPosition> projectPoint(const CoordinateSystem &cameraSystem,
 }
 
 std::optional<ScreenLine> projectLine(const Pose &pose, Line line,
-                                      bool piPeriod = true) {
+                                      bool piPeriod = true,
+                                      double padding = 0.) {
 
   auto camerasys = getCameraSystem(pose);
 
@@ -96,8 +97,10 @@ std::optional<ScreenLine> projectLine(const Pose &pose, Line line,
   for (double t = 0; t < 1. + 1e-5; t += 5. / std::sqrt(se * se)) {
     Vector v = s * (1. - t) + e * t;
     if (auto projected = projectPoint(camerasys, v)) {
-      bool ons = projected->x >= -WIDTH / 10 && projected->x < 1.1 * WIDTH &&
-                 projected->y >= -HEIGHT / 10 && projected->y < 1.1 * HEIGHT;
+      bool ons = projected->x >= WIDTH * -padding &&
+                 projected->x < (1 + padding) * WIDTH &&
+                 projected->y >= HEIGHT * -padding &&
+                 projected->y < (1 + padding) * HEIGHT;
       inRange |= ons;
     }
   }
@@ -231,16 +234,18 @@ double loss(const std::pair<ScreenLine, Vector> &constraint,
 /// squared distance to the line. Returns 3D points on that line which are on
 /// the screen.
 std::pair<std::vector<Vector>, Line>
-matchBoardLine(const ScreenLine &screenLine, Pose posePreviousFrame,
+matchBoardLine(ScreenLine screenLine, Pose posePreviousFrame,
                std::array<Line, 4> candidates, std::string screenLineName) {
   std::cout << "matching " << screenLineName << ", angle = " << screenLine.angle
             << std::endl;
-  Pose projectPose = posePreviousFrame;
-  if (screenLineName == "blue") {
-    projectPose.x -= 20 * std::cos(posePreviousFrame.theta);
-    projectPose.y -= 20 * std::sin(posePreviousFrame.theta);
+  bool isColor = screenLineName == "orange" || screenLineName == "blue";
+  double padding = 0.;
+  if (isColor) {
+    screenLine.angle -= 0.05;
+    padding = 1.;
   }
-  CoordinateSystem cameraSystemPreviousFrame = getCameraSystem(projectPose);
+  CoordinateSystem cameraSystemPreviousFrame =
+      getCameraSystem(posePreviousFrame);
   std::vector<Vector> points;
   double bestDiff = 1e20;
   Line bLine = Line::BORDER_OUT_1;
@@ -251,14 +256,19 @@ matchBoardLine(const ScreenLine &screenLine, Pose posePreviousFrame,
     for (double t = 0; t < 1.; t += 5. / std::sqrt(se * se)) {
       Vector v = s * (1. - t) + e * t;
       if (auto projected = projectPoint(cameraSystemPreviousFrame, v)) {
-        if (projected->x >= 0 && projected->x < WIDTH && projected->y >= 0 &&
-            projected->y < HEIGHT) {
+        std::cout << "x = " << projected->x << ", y = " << projected->y
+                  << std::endl;
+        if (projected->x >= WIDTH * -padding &&
+            projected->x < (1 + padding) * WIDTH &&
+            projected->y >= HEIGHT * -padding &&
+            projected->y < (1 + padding) * HEIGHT) {
           tpoints.push_back(v);
         }
       }
     }
     std::cout << "cand is " << i << std::endl;
-    auto projected = projectLine(posePreviousFrame, candidates[i], true);
+    auto projected =
+        projectLine(posePreviousFrame, candidates[i], true, padding);
     if (!projected.has_value())
       continue;
     if (screenLineName == "blue") {
