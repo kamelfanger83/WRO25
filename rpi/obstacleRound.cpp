@@ -51,6 +51,9 @@ std::optional<std::pair<std::queue<Waypoint>, Mode>>
 startMode(Frame &frame, const Pose &position);
 
 std::optional<std::pair<std::queue<Waypoint>, Mode>>
+modeFromFirstLine(Frame &frame, const Pose &position);
+
+std::optional<std::pair<std::queue<Waypoint>, Mode>>
 startMode(Frame &frame, const Pose &position) {
 
   std::queue<Waypoint> waypoints;
@@ -61,7 +64,12 @@ startMode(Frame &frame, const Pose &position) {
       frame, Segment::SEGMENT_1, position, TrafficLight::TRAFFICLIGHT_4);
 
   if (!trafficLight.has_value()) {
-    waypoints.push({45, 150, true});
+
+
+
+    waypoints.push({45, 140, false});
+    waypoints.push({50, 155, true});
+    
     return {{waypoints, Mode{modeFromMiddle}}};
   } else if (trafficLight.value() == 'r') {
     waypoints.push({48, 125, false});
@@ -70,7 +78,7 @@ startMode(Frame &frame, const Pose &position) {
     waypoints.push({80, 190, true});
     return {{waypoints, Mode{modeFromEndRight}}};
   } else {
-    waypoints.push({35, 150, true});
+   
     waypoints.push({30, 180, true});
     waypoints.push({50, 220, true});
     return {{waypoints, Mode{modeFromEndLeft}}};
@@ -100,6 +108,7 @@ modeFromMiddle(Frame &frame, const Pose &position) {
   }
   if ((lightLeft.has_value() && *lightLeft == 'r') ||
       (lightRight.has_value() && *lightRight == 'r')) {
+    waypoints.push(wayPointInSegment(curr, {70, 160, false}));
     waypoints.push(wayPointInSegment(curr, {60, 170, false}));
     waypoints.push(wayPointInSegment(curr, {80, 200, true}));
     return {{waypoints, Mode{modeFromEndRight}}};
@@ -130,8 +139,8 @@ modeFromEndRight(Frame &frame, const Pose &position) {
 
   if (!(first.has_value() || second.has_value())) {
     waypoints.push(wayPointInSegment(current, {80, 100, true}));
-    waypoints.push(wayPointInSegment(current, {80, 80}));
-    waypoints.push(wayPointInSegment(current, {55, 100}));
+    waypoints.push(wayPointInSegment(current, {80, 80, false}));
+    waypoints.push(wayPointInSegment(current, {55, 100, true}));
     // return {{waypoints, Mode{endMode}}};
     return {{waypoints, Mode{modeFromFirstLine}}};
 
@@ -152,7 +161,7 @@ modeFromEndRight(Frame &frame, const Pose &position) {
     waypoints.push(wayPointInSegment(current, {65, 65, false}));
     waypoints.push(wayPointInSegment(current, {20, 70, true}));
 
-    waypoints.push(wayPointInSegment(current, {20, 100, true}); // cross first line
+    waypoints.push(wayPointInSegment(current, {20, 100, true})); // cross first line
     waypoints.push(wayPointInSegment(current, {35, 110, false}));
     waypoints.push(wayPointInSegment(current, {50, 140, true}));
 
@@ -183,8 +192,14 @@ modeFromEndLeft(Frame &frame, const Pose &position) {
 
   } else if ((first.has_value() && *first == 'r') ||
              (second.has_value() && *second == 'r')) {
-    waypoints.push(wayPointInSegment(current, {82, 100, false}));
-    waypoints.push(wayPointInSegment(current, {65, 125, true}));
+
+    waypoints.push(wayPointInSegment(current, {80, 100, false}));
+    waypoints.push(wayPointInSegment(current, {60, 120, false}));
+    waypoints.push(wayPointInSegment(current, {50, 135, false}));
+
+    waypoints.push(wayPointInSegment(current, {50, 150, true}));
+    ;
+    
     // waypoints.push(wayPointInSegment(current, {65, 140, true}));
     return {{waypoints, Mode{modeFromMiddle}}};
 

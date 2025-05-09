@@ -236,13 +236,11 @@ double loss(const std::pair<ScreenLine, Vector> &constraint,
 std::pair<std::vector<Vector>, Line>
 matchBoardLine(ScreenLine screenLine, Pose posePreviousFrame,
                std::array<Line, 4> candidates, std::string screenLineName) {
-  std::cout << "matching " << screenLineName << ", angle = " << screenLine.angle
-            << std::endl;
   bool isColor = screenLineName == "orange" || screenLineName == "blue";
   double padding = 0.;
   if (isColor) {
     screenLine.angle -= 0.05;
-    padding = 1.;
+    padding = .25;
   }
   CoordinateSystem cameraSystemPreviousFrame =
       getCameraSystem(posePreviousFrame);
@@ -256,8 +254,6 @@ matchBoardLine(ScreenLine screenLine, Pose posePreviousFrame,
     for (double t = 0; t < 1.; t += 5. / std::sqrt(se * se)) {
       Vector v = s * (1. - t) + e * t;
       if (auto projected = projectPoint(cameraSystemPreviousFrame, v)) {
-        std::cout << "x = " << projected->x << ", y = " << projected->y
-                  << std::endl;
         if (projected->x >= WIDTH * -padding &&
             projected->x < (1 + padding) * WIDTH &&
             projected->y >= HEIGHT * -padding &&
@@ -266,15 +262,11 @@ matchBoardLine(ScreenLine screenLine, Pose posePreviousFrame,
         }
       }
     }
-    std::cout << "cand is " << i << std::endl;
     auto projected =
         projectLine(posePreviousFrame, candidates[i], true, padding);
     if (!projected.has_value())
       continue;
-    if (screenLineName == "blue") {
-      std::cout << "blue is the line, tpoints.size()=" << tpoints.size()
-                << "angle: " << projected->angle << std::endl;
-    }
+
     double diff = std::fmod(screenLine.angle - projected->angle + M_PI, M_PI);
     double rdiff;
     if (diff > M_PI_2)
