@@ -21,22 +21,24 @@ struct Mode {
       plan;
 };
 
-int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
+int run(const Mode &startMode, const Pose &startPose, bool openRound) {
   std::queue<Waypoint> waypoints;
   Mode nextMode = startMode;
   Pose pose = startPose;
   Pose lastArduinoPose = {0, 0, 0};
   ControllerState controllerState{0};
 
-  double blindError = 1e6;
+  bool first = true;
   Commands commands{84, 0};
 
+  const int blurSleep = 500;
+
   auto positionVisual = [&]() -> void {
-    blindError = 0.;
+    first = false;
     commands.speed = 0;
     sendCommands(commands);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+    std::this_thread::sleep_for(std::chrono::milliseconds(blurSleep));
 
     captureFrameBlocking();
     std::cout << "Captured a frame at: " << lastFrame.timestamp << std::endl;
@@ -48,7 +50,7 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
     printPose(pose);
     auto screenLines = findLines(lastFrame, pose);
     drawScreenLineSet(lastFrame, screenLines);
-    if (ignoreInner)
+    if (openRound)
       screenLines.right = {};
 
     drawProjectedLines(lastFrame, pose, {205, 255, 166});
@@ -73,9 +75,10 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
     auto arduinoPose = processArduinoResponse();
     if (arduinoPose.has_value()) {
       auto diffPose = *arduinoPose / lastArduinoPose;
-      blindError +=
-          std::sqrt(diffPose.x * diffPose.x + diffPose.y * diffPose.y) +
-          50 * std::abs(diffPose.theta);
+      if (flipped) {
+        diffPose.theta *= -1;
+        diffPose.y *= -1;
+      }
       pose = pose * diffPose;
       lastArduinoPose = *arduinoPose;
     }
@@ -90,8 +93,15 @@ int run(const Mode &startMode, const Pose &startPose, bool ignoreInner) {
     }
 
     if (waypoints.empty()) {
-      if (!capturedFrame)
+      if (!capturedFrame && !openRound) {
+        commands.speed = 0;
+        sendCommands(commands);
+        std::this_thread::sleep_for(std::chrono::milliseconds(blurSleep));
         captureFrameBlocking();
+      }
+      if (openRound && first) {
+        positionVisual();
+      }
       auto result = nextMode.plan(lastFrame, pose);
       if (!result.has_value()) {
         break;

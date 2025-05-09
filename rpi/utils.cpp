@@ -93,25 +93,24 @@ void captureFrameBlocking() {
 }
 
 bool isFlipped(const Frame &frame) {
-  auto orangePoints = mask(frame, isOrange);
-  auto bluePoints = mask(frame, isBlue);
+  auto whitePoints = mask(frame, isWhite);
 
-  Point orangeCOM{0, 0}, blueCOM{0, 0};
-  for (const auto &orangeP : orangePoints) {
-    orangeCOM.x += orangeP.x;
-    orangeCOM.y += orangeP.y;
-  }
-  for (const auto &blueP : bluePoints) {
-    blueCOM.x += blueP.x;
-    blueCOM.y += blueP.y;
+  Point whiteCOM{0, 0};
+  for (const auto &whiteP : whitePoints) {
+    whiteCOM.x += whiteP.x;
+    whiteCOM.y += whiteP.y;
   }
 
-  orangeCOM.x /= orangePoints.size();
-  orangeCOM.y /= orangePoints.size();
-  blueCOM.x /= bluePoints.size();
-  blueCOM.y /= bluePoints.size();
+  Frame debug = cloneFrame(lastFrame);
+  colorColor(debug, whitePoints, {0, 0, 255});
+  debug.timestamp = 69;
 
-  bool flipped = orangeCOM.y < blueCOM.y;
+  saveFrame(debug);
+
+  whiteCOM.x /= whitePoints.size();
+  whiteCOM.y /= whitePoints.size();
+
+  bool flipped = whiteCOM.x < WIDTH / 2;
 
   if (flipped)
     std::cout << "We are going counterclockwisely" << std::endl;

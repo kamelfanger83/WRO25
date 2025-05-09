@@ -9,6 +9,8 @@
 
 int actualServo = 84;
 int targetServo = 84;
+int actualSpeed = 0;
+int targetSpeed = 0;
 
 // Positioning variables. Everything is in cm.
 float x = 0, y = 0, theta = 0;
@@ -18,6 +20,7 @@ bool forward = true;
 
 unsigned long lastPosePrint = 0;
 unsigned long lastServoUpdate =0;
+unsigned long lastSpeedUpdate =0;
 
 void registerPulse () {
   ++pulses;
@@ -68,15 +71,8 @@ void loop() {
     }
     else if (num % 2 == 0) {
       Serial.print("New motor speed: ");
-      Serial.println(num / 2);
-      digitalWrite(DIR_PIN, num >= 0 ? LOW : HIGH);
-      if (num < 0) {
-        forward = false;
-      }
-      if (num > 0) {
-        forward = true;
-      }
-      analogWrite(PWM_PIN, 255 - abs(num / 2));
+      targetSpeed = num / 2;
+      Serial.println(targetSpeed);
     } else  {
       targetServo = num / 2;
       Serial.print("New servo angle:");
@@ -90,6 +86,20 @@ void loop() {
     if (actualServo < targetServo) ++actualServo;
     myservo.write(actualServo);
     lastServoUpdate = micros();
+  }
+  if(micros() > lastSpeedUpdate + 3000 && actualSpeed != targetSpeed) {
+    if (abs(actualSpeed) > abs(targetSpeed)) actualSpeed = targetSpeed;
+    else if (actualSpeed > targetSpeed) --actualSpeed;
+    else if (actualSpeed < targetSpeed) ++actualSpeed;
+    digitalWrite(DIR_PIN, actualSpeed >= 0 ? LOW : HIGH);
+    if (actualSpeed < 0) {
+       forward = false;
+    }
+    if (actualSpeed > 0) {
+       forward = true;
+    }
+    analogWrite(PWM_PIN, 255 - abs(actualSpeed));
+    lastSpeedUpdate = micros();
   }
   int npulses;
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {

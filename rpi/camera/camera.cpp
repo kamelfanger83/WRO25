@@ -120,6 +120,8 @@ static void requestComplete(libcamera::Request *request) {
         static_cast<uint8_t *>(mmap(nullptr, length, PROT_READ | PROT_WRITE,
                                     MAP_SHARED, plane.fd.get(), offset));
 
+    std::cout << "flipped is: " << (flipped ? "true" : "false") << std::endl;
+
     for (int y = 0; y < HEIGHT; ++y) {
       for (int x = 0; x < WIDTH; ++x) {
         int i;

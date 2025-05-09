@@ -20,7 +20,7 @@
 /// Assumptions: The points outside the field are ment to be already filtered
 /// out.
 std::optional<ScreenLine> findLine(std::vector<Point> points) {
-  if (points.size() < 200) {
+  if (points.size() < 400) {
     std::cout << "Insufficient points to find a line." << std::endl;
     return {};
   }

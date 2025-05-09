@@ -105,7 +105,7 @@ bool isColor(const HSVPixel pixel) {
 
 bool isBlue(const HSVPixel pixel) {
   return int(215 / 360. * 255) <= pixel.h && pixel.h <= int(260 / 360. * 255) &&
-         isColor(pixel);
+         pixel.s > int(0.18 * 255) && pixel.v > int(0.35 * 255);
 }
 
 bool isOrange(const HSVPixel pixel) {

@@ -174,7 +174,7 @@ modeFromEndLeft(Frame &frame, const Pose &position) {
 
   } else if ((first.has_value() && *first == 'r') ||
              (second.has_value() && *second == 'r')) {
-    waypoints.push(wayPointInSegment(current, {75, 100, true}));
+    waypoints.push(wayPointInSegment(current, {82, 100, true}));
     waypoints.push(wayPointInSegment(current, {65, 125, true}));
     // waypoints.push(wayPointInSegment(current, {65, 140, true}));
     return {{waypoints, Mode{modeFromMiddle}}};

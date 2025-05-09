@@ -1,5 +1,6 @@
 #pragma once
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <iomanip>
@@ -229,10 +230,9 @@ double loss(const std::pair<ScreenLine, Vector> &constraint,
 /// where the points on that boardline which are on the screen have the smallest
 /// squared distance to the line. Returns 3D points on that line which are on
 /// the screen.
-std::vector<Vector> matchBoardLine(const ScreenLine &screenLine,
-                                   const Pose &posePreviousFrame,
-                                   std::array<Line, 4> candidates,
-                                   std::string screenLineName) {
+std::pair<std::vector<Vector>, Line>
+matchBoardLine(const ScreenLine &screenLine, const Pose &posePreviousFrame,
+               std::array<Line, 4> candidates, std::string screenLineName) {
   CoordinateSystem cameraSystemPreviousFrame =
       getCameraSystem(posePreviousFrame);
   std::vector<Vector> points;
@@ -269,16 +269,16 @@ std::vector<Vector> matchBoardLine(const ScreenLine &screenLine,
     }
   }
   // TODO: tweak this number
-  if (bestDiff < 0.15) {
+  if (bestDiff < 0.3) {
     std::cout << "Matched " << screenLineName << " to " << int(bLine)
               << " with average = " << bestDiff << std::endl;
-    return points;
+    return {points, bLine};
   } else {
     std::cout << "Wasn't able to find a line which makes sufficient amount of "
                  "sense for "
               << screenLineName << ". Best would have been " << int(bLine)
               << " with average = " << bestDiff << std::endl;
-    return {};
+    return {{}, Line::INVALID};
   }
 }
 
@@ -290,14 +290,18 @@ std::vector<std::pair<ScreenLine, Vector>>
 getConstraints(const ScreenLineSet &screenLines,
                const Pose &posePreviousFrame) {
   std::vector<std::pair<ScreenLine, Vector>> constraints;
+  std::vector<Line> matchedLines;
   auto matchAddConstraints = [&](const std::optional<ScreenLine> &screenLineOpt,
                                  std::array<Line, 4> candidates,
                                  std::string screenLineName) {
     if (!screenLineOpt.has_value())
       return;
     ScreenLine screenLine = *screenLineOpt;
-    for (auto p : matchBoardLine(screenLine, posePreviousFrame, candidates,
-                                 screenLineName)) {
+    auto [points, line] = matchBoardLine(screenLine, posePreviousFrame,
+                                         candidates, screenLineName);
+    if (line != Line::INVALID)
+      matchedLines.push_back(line);
+    for (auto p : points) {
       constraints.push_back({screenLine, p});
     }
   };
@@ -306,6 +310,14 @@ getConstraints(const ScreenLineSet &screenLines,
   matchAddConstraints(screenLines.left, outerLines, "left");
   matchAddConstraints(screenLines.back, outerLines, "back");
   matchAddConstraints(screenLines.right, innerLines, "right");
+  std::sort(matchedLines.begin(), matchedLines.end());
+  auto last = std::unique(matchedLines.begin(), matchedLines.end());
+  if ((unsigned long)(std::distance(matchedLines.begin(), last)) <
+      matchedLines.size()) {
+    std::cout << "Matched multiple lines to the same one. aborting..."
+              << std::endl;
+    return {};
+  }
   return constraints;
 }
 

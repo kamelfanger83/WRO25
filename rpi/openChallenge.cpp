@@ -25,19 +25,23 @@ startMode(const Frame &frame, const Pose &position) {
 
   if (roundsCompleted == 0) {
     startPose = position;
-    waypoints.push({startPose.x, 250});
+    waypoints.push({startPose.x, 240, false});
   } else {
-    waypoints.push({30, 250});
+    waypoints.push({30, 240, false});
   }
-  waypoints.push({250, 270});
-  waypoints.push({270, 50});
-  waypoints.push({50, 30});
+  waypoints.push({150, 270, true});
+  waypoints.push({240, 270, false});
+  waypoints.push({270, 150, true});
+  waypoints.push({270, 60, false});
+  waypoints.push({150, 30, true});
+  waypoints.push({60, 30, false});
 
   if (roundsCompleted == 2) {
+    waypoints.push({30, 100, true});
     waypoints.push({startPose.x, startPose.y});
     return {{waypoints, Mode{endMode}}};
   } else {
-
+    waypoints.push({30, 150, true});
     return {{waypoints, Mode{startMode}}};
   }
 }
@@ -46,15 +50,19 @@ int main() {
   initializeCamera();
   initializeSerial();
 
+  waitForGo();
+
   captureFrameBlocking();
 
   flipped = isFlipped(lastFrame);
 
+  captureFrameBlocking();
+
   std::cout << "Captured first frame at: " << lastFrame.timestamp << std::endl;
 
   std::array<Pose, 6> startCandidates = {
-      Pose{35, 125, M_PI_2}, {50, 125, M_PI_2}, {65, 125, M_PI_2},
-      {35, 175, M_PI_2},     {50, 175, M_PI_2}, {65, 175, M_PI_2}};
+      Pose{35, 125, M_PI_2}, {50, 125, M_PI_2}, {65, 125, 1.77382},
+      {35, 175, M_PI_2},     {50, 175, M_PI_2}, {65, 175, 1.77382}};
 
   double minLoss = 1e9;
   Pose bestPose = {50, 150, M_PI_2};
