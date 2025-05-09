@@ -100,15 +100,15 @@ modeFromMiddle(Frame &frame, const Pose &position) {
   }
   if ((lightLeft.has_value() && *lightLeft == 'r') ||
       (lightRight.has_value() && *lightRight == 'r')) {
-    waypoints.push(wayPointInSegment(curr, {60, 170}));
-    waypoints.push(wayPointInSegment(curr, {75, 200, true}));
+    waypoints.push(wayPointInSegment(curr, {60, 170, false}));
+    waypoints.push(wayPointInSegment(curr, {80, 200, true}));
     return {{waypoints, Mode{modeFromEndRight}}};
   }
 
-  if ((lightLeft.has_value() && *lightLeft == 'g') ||
+  if ((lightLeft.has_value() && *lightLeft == 'g') || // links durch
       (lightRight.has_value() && *lightRight == 'g')) {
-    waypoints.push(wayPointInSegment(curr, {20, 190, false}));
-    waypoints.push(wayPointInSegment(curr, {50, 230, true}));
+    waypoints.push(wayPointInSegment(curr, {25, 175, true}));
+    waypoints.push(wayPointInSegment(curr, {50, 220, true}));
     return {{waypoints, Mode{modeFromEndLeft}}};
   }
   return {};
@@ -135,18 +135,31 @@ modeFromEndRight(Frame &frame, const Pose &position) {
     return {{waypoints, Mode{endMode}}};
     // return {{waypoints, Mode{modeFromFirstLine}}};
 
-  } else if ((first.has_value() && *first == 'r') ||
+  } else if ((first.has_value() && *first == 'r') || // rechts durch
              (second.has_value() && *second == 'r')) {
+    // waypoints.push(wayPointInSegment(current, {100, 100, true}));
     waypoints.push(wayPointInSegment(current, {80, 100, true}));
-    waypoints.push(wayPointInSegment(current, {70, 125, true}));
-    // waypoints.push(wayPointInSegment(current, {70, 140, true}));
+    waypoints.push(wayPointInSegment(current, {60, 130, false}));
+
+    // waypoints.push(wayPointInSegment(current, {65, 110, false}));
+    waypoints.push(wayPointInSegment(current, {60, 150, true}));
+    // waypoints.push(wayPointInSegment(current, {70, 125, true}));
+    //  waypoints.push(wayPointInSegment(current, {70, 140, true}));
     return {{waypoints, Mode{modeFromMiddle}}};
 
-  } else if ((first.has_value() && *first == 'g') ||
+  } else if ((first.has_value() && *first == 'g') || // links durch
              (second.has_value() && *second == 'g')) {
     waypoints.push(wayPointInSegment(current, {65, 65, false}));
-    waypoints.push(wayPointInSegment(current, {20, 100, true}));
-    waypoints.push(wayPointInSegment(current, {35, 140, true}));
+    waypoints.push(wayPointInSegment(current, {20, 70, true}));
+
+    /*
+    waypoints.push(wayPointInSegment(current, {35, 110, false}));
+    waypoints.push(wayPointInSegment(current, {50, 140, true}));
+    waypoints.push( */
+    wayPointInSegment(current, {20, 100, true}); // cross first line
+    waypoints.push(wayPointInSegment(current, {35, 110, false}));
+    waypoints.push(wayPointInSegment(current, {50, 140, true}));
+
     return {{waypoints, Mode{modeFromMiddle}}};
   }
   return {};
@@ -174,7 +187,7 @@ modeFromEndLeft(Frame &frame, const Pose &position) {
 
   } else if ((first.has_value() && *first == 'r') ||
              (second.has_value() && *second == 'r')) {
-    waypoints.push(wayPointInSegment(current, {82, 100, true}));
+    waypoints.push(wayPointInSegment(current, {82, 100, false}));
     waypoints.push(wayPointInSegment(current, {65, 125, true}));
     // waypoints.push(wayPointInSegment(current, {65, 140, true}));
     return {{waypoints, Mode{modeFromMiddle}}};

@@ -120,7 +120,7 @@ bool isBlack(const HSVPixel pixel) {
 }
 
 bool isWhite(const HSVPixel pixel) {
-  return pixel.s < int(0.15 * 255) && pixel.v > int(0.6 * 255);
+  return pixel.s < int(0.15 * 255) && pixel.v > int(0.75 * 255);
 }
 
 bool isGreen(const HSVPixel pixel) {

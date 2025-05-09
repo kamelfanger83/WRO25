@@ -231,10 +231,16 @@ double loss(const std::pair<ScreenLine, Vector> &constraint,
 /// squared distance to the line. Returns 3D points on that line which are on
 /// the screen.
 std::pair<std::vector<Vector>, Line>
-matchBoardLine(const ScreenLine &screenLine, const Pose &posePreviousFrame,
+matchBoardLine(const ScreenLine &screenLine, Pose posePreviousFrame,
                std::array<Line, 4> candidates, std::string screenLineName) {
-  CoordinateSystem cameraSystemPreviousFrame =
-      getCameraSystem(posePreviousFrame);
+  std::cout << "matching " << screenLineName << ", angle = " << screenLine.angle
+            << std::endl;
+  Pose projectPose = posePreviousFrame;
+  if (screenLineName == "blue") {
+    projectPose.x -= 20 * std::cos(posePreviousFrame.theta);
+    projectPose.y -= 20 * std::sin(posePreviousFrame.theta);
+  }
+  CoordinateSystem cameraSystemPreviousFrame = getCameraSystem(projectPose);
   std::vector<Vector> points;
   double bestDiff = 1e20;
   Line bLine = Line::BORDER_OUT_1;
@@ -251,12 +257,15 @@ matchBoardLine(const ScreenLine &screenLine, const Pose &posePreviousFrame,
         }
       }
     }
-    if (tpoints.empty()) {
+    std::cout << "cand is " << i << std::endl;
+    auto projected = projectLine(posePreviousFrame, candidates[i], true);
+    if (!projected.has_value())
       continue;
+    if (screenLineName == "blue") {
+      std::cout << "blue is the line, tpoints.size()=" << tpoints.size()
+                << "angle: " << projected->angle << std::endl;
     }
-    auto projected =
-        unwrap(projectLine(posePreviousFrame, candidates[i], true));
-    double diff = std::fmod(screenLine.angle - projected.angle + M_PI, M_PI);
+    double diff = std::fmod(screenLine.angle - projected->angle + M_PI, M_PI);
     double rdiff;
     if (diff > M_PI_2)
       rdiff = M_PI - diff;
@@ -268,8 +277,10 @@ matchBoardLine(const ScreenLine &screenLine, const Pose &posePreviousFrame,
       bLine = candidates[i];
     }
   }
-  // TODO: tweak this number
-  if (bestDiff < 0.3) {
+  double limit = 0.3;
+  if (screenLineName == "blue" || screenLineName == "orange")
+    limit = 0.15;
+  if (bestDiff < limit) {
     std::cout << "Matched " << screenLineName << " to " << int(bLine)
               << " with average = " << bestDiff << std::endl;
     return {points, bLine};

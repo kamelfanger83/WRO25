@@ -175,37 +175,36 @@ double angDist(double a, double b) {
 BorderPointPartition findBorderPoints(Frame &frame, const Pose &poseEstimate) {
   BorderPointPartition result;
 
-  Segment segment = inSegmentSlanted(poseEstimate);
-
-  double angleLeft, angleBack, angleRight;
   Line leftLine = Line::BORDER_OUT_1, backLine = Line::BORDER_OUT_2,
        rightLine = Line::BORDER_IN_1;
-  switch (segment) {
-  case Segment::SEGMENT_1: {
-    leftLine = Line::BORDER_OUT_1;
-    backLine = Line::BORDER_OUT_2;
-    rightLine = Line::BORDER_IN_1;
-    break;
-  }
-  case Segment::SEGMENT_2: {
-    leftLine = Line::BORDER_OUT_2;
-    backLine = Line::BORDER_OUT_3;
-    rightLine = Line::BORDER_IN_2;
-    break;
-  }
-  case Segment::SEGMENT_3: {
-    leftLine = Line::BORDER_OUT_3;
-    backLine = Line::BORDER_OUT_4;
-    rightLine = Line::BORDER_IN_3;
-    break;
-  }
-  case Segment::SEGMENT_4: {
+  if (projectLine(poseEstimate, Line::BORDER_OUT_4).has_value() &&
+      projectLine(poseEstimate, Line::BORDER_OUT_1).has_value()) {
     leftLine = Line::BORDER_OUT_4;
     backLine = Line::BORDER_OUT_1;
+    std::cout << "yes" << std::endl;
+  } else
+    for (auto potentialLeft : outerLines) {
+      if (projectLine(poseEstimate, potentialLeft, false).has_value()) {
+        leftLine = potentialLeft;
+        backLine = Line((int(leftLine) + 1) % 4);
+        break;
+      }
+    }
+  if (projectLine(poseEstimate, Line::BORDER_IN_4).has_value() &&
+      projectLine(poseEstimate, Line::BORDER_IN_1).has_value()) {
     rightLine = Line::BORDER_IN_4;
-    break;
-  }
-  }
+  } else
+    for (auto potentialRight : innerLines) {
+      if (projectLine(poseEstimate, potentialRight, false).has_value()) {
+        rightLine = potentialRight;
+        break;
+      }
+    }
+
+  std::cout << "left is: " << int(leftLine) << ", back is: " << int(backLine)
+            << "right is: " << int(rightLine) << std::endl;
+
+  double angleLeft, angleBack, angleRight;
 
   auto projectedLeft = projectLine(poseEstimate, leftLine, false);
   if (projectedLeft.has_value()) {
@@ -272,18 +271,24 @@ ScreenLineSet findLines(Frame &frame, const Pose &poseEstimate) {
 
   BorderPointPartition borderPartition = findBorderPoints(frame, poseEstimate);
 
-  lines.left = findLine(borderPartition.left);
   lines.right = findLine(borderPartition.right);
   if (lines.right.has_value()) {
     std::vector<Point> nback;
+    std::vector<Point> nleft;
     // they are sorted by y, i checked
     int rminy = borderPartition.right[borderPartition.right.size() / 10].y;
     for (const auto &p : borderPartition.back) {
       if (!isRight(*lines.right, p) || p.y < rminy - 100)
         nback.push_back(p);
     }
+    for (const auto &p : borderPartition.left) {
+      if (!isRight(*lines.right, p) || p.y < rminy - 100)
+        nleft.push_back(p);
+    }
     borderPartition.back = nback;
+    borderPartition.left = nleft;
   }
+  lines.left = findLine(borderPartition.left);
   lines.back = findLine(borderPartition.back);
 
   colorColor(frame, borderPartition.left, {113, 255, 255});
