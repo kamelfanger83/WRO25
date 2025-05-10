@@ -190,16 +190,38 @@ BorderPointPartition findBorderPoints(Frame &frame, const Pose &poseEstimate) {
         break;
       }
     }
-  if (projectLine(poseEstimate, Line::BORDER_IN_4).has_value() &&
-      projectLine(poseEstimate, Line::BORDER_IN_1).has_value()) {
-    rightLine = Line::BORDER_IN_4;
-  } else
-    for (auto potentialRight : innerLines) {
-      if (projectLine(poseEstimate, potentialRight, false).has_value()) {
-        rightLine = potentialRight;
-        break;
+  auto camsys = getCameraSystem(poseEstimate);
+  bool caveman = false;
+  for (auto potentialRight : innerLines) {
+    auto [s, e] = getStartEndPoints(potentialRight);
+
+    auto good = [&](std::optional<ScreenPosition> s) -> bool {
+      if (auto projected = s) {
+        return projected->x >= 0 && projected->x < WIDTH && projected->y >= 0 &&
+               projected->y < HEIGHT;
       }
+      return false;
+    };
+    if (good(projectPoint(camsys, s)) && good(projectPoint(camsys, e))) {
+      rightLine = potentialRight;
+      caveman = true;
+      break;
     }
+  }
+  if (!caveman) {
+    if (projectLine(poseEstimate, Line::BORDER_IN_4).has_value() &&
+        projectLine(poseEstimate, Line::BORDER_IN_1).has_value()) {
+      rightLine = Line::BORDER_IN_4;
+    } else
+      for (auto potentialRight : innerLines) {
+        if (projectLine(poseEstimate, potentialRight, false).has_value()) {
+          rightLine = potentialRight;
+          break;
+        }
+      }
+  } else {
+    std::cout << "we cavemaned" << std::endl;
+  }
 
   std::cout << "left is: " << int(leftLine) << ", back is: " << int(backLine)
             << "right is: " << int(rightLine) << std::endl;

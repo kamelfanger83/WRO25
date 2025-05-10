@@ -1,5 +1,5 @@
 #include <Servo.h>
-#include <util/atomic.h> 
+#include <util/atomic.h>
 
 #define PWM_PIN 11
 #define FG_PIN 2
@@ -48,8 +48,12 @@ void setup() {
 
   digitalWrite(DIR_PIN, LOW);
   analogWrite(PWM_PIN, 255);
-  
+
   attachInterrupt(digitalPinToInterrupt(FG_PIN), registerPulse, RISING);
+
+  myservo.write(70);
+  delay(1000);
+  myservo.write(actualServo);
 
   // Send a ready signal after initialization
   Serial.println("READY");
@@ -77,10 +81,10 @@ void loop() {
       targetServo = num / 2;
       Serial.print("New servo angle:");
       Serial.println(targetServo);
-      
+
     }
   }
-  
+
   if(micros() > lastServoUpdate + 5200 && actualServo != targetServo) {
     if (actualServo > targetServo) --actualServo;
     if (actualServo < targetServo) ++actualServo;
@@ -110,11 +114,16 @@ void loop() {
   float shaftD = float(npulses) / 268.;
 
   float turnR = predictedTurnRadius(actualServo);
-  
+
   // TODO: consider which back wheel slips how much
-  
-  float dTheta = (shaftD * wheelDiam * M_PI * (forward ? 1 : -1)) / (turnR + 5.2*(turnR>0 ? 1 : -1));
- 
+
+  double con = 0;
+  if (turnR > 0) {
+    con = 8;
+  }
+
+  float dTheta = (shaftD * wheelDiam * M_PI * (forward ? 1 : -1)) / (turnR + con*(turnR>0 ? 1 : -1));
+
   // Coordinates are in ICR system. Idk coordinate systems here are a bit of a
   // mess.
   float xC = turnR;
@@ -134,5 +143,5 @@ void loop() {
     Serial.println("]");
     lastPosePrint = micros();
   }
-  
+
 }

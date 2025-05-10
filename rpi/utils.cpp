@@ -92,30 +92,39 @@ void captureFrameBlocking() {
   }
 }
 
-bool isFlipped(const Frame &frame) {
-  auto whitePoints = mask(frame, isWhite);
+bool isWhiteOrWood(const HSVPixel pixel) {
+  return isWhite(pixel) || isWood(pixel);
+}
 
-  Point whiteCOM{0, 0};
-  for (const auto &whiteP : whitePoints) {
-    whiteCOM.x += whiteP.x;
-    whiteCOM.y += whiteP.y;
+bool isFlipped(const Frame &frame) {
+  auto whitePoints = mask(frame, isWhiteOrWood);
+
+  int lbox = 0, rbox = 0;
+  for (const auto &p : whitePoints) {
+    if (415 < p.y && p.y < 715) {
+      if (p.x < 200)
+        ++lbox;
+      if (WIDTH - 200 < p.x)
+        ++rbox;
+    }
   }
 
-  Frame debug = cloneFrame(lastFrame);
-  colorColor(debug, whitePoints, {0, 0, 255});
-  debug.timestamp = 69;
-
-  saveFrame(debug);
-
-  whiteCOM.x /= whitePoints.size();
-  whiteCOM.y /= whitePoints.size();
-
-  bool flipped = whiteCOM.x < WIDTH / 2;
+  bool flipped;
+  if (lbox > rbox)
+    flipped = true;
+  else
+    flipped = false;
 
   if (flipped)
     std::cout << "We are going counterclockwisely" << std::endl;
   else
     std::cout << "We are going clockwisely" << std::endl;
+
+  Frame debug = cloneFrame(lastFrame);
+  colorColor(debug, whitePoints, {0, 255, 255});
+
+  debug.timestamp = 69;
+  saveFrame(debug);
 
   return flipped;
 }

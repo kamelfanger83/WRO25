@@ -14,10 +14,11 @@ struct Point {
 
 /// Goes over a frame and returns a vector containing all the points in the
 /// Frame of a certain color.
-std::vector<Point> mask(const Frame &frame, bool (*is_color)(const HSVPixel)) {
+std::vector<Point> mask(const Frame &frame, bool (*is_color)(const HSVPixel),
+                        int minY = 0) {
   std::vector<Point> points;
   for (int x = 0; x < WIDTH; ++x) {
-    for (int y = 0; y < HEIGHT; ++y) {
+    for (int y = minY; y < HEIGHT; ++y) {
       if (is_color(frame.HSV[y * WIDTH + x])) {
         points.push_back({x, y});
       }
@@ -38,7 +39,9 @@ void colorColor(Frame &frame, std::vector<Point> points,
 /// Returns how much this pixel is not a border pixel. If a black border is used
 /// this returns the brightness. If the blue border is used, it returns the
 /// 255 - saturation.
-double fieldNess(const HSVPixel &pixel) { return 255 - pixel.s; }
+double fieldNess(const HSVPixel &pixel) {
+  return std::min(double(pixel.v), 255. - pixel.s);
+}
 
 /// Gradient function using 5x5 Sobel kernel. Takes a frame and a point and
 /// returns the direction of the gradient at that point.
@@ -114,13 +117,20 @@ bool isOrange(const HSVPixel pixel) {
 }
 
 bool isBlack(const HSVPixel pixel) {
-  // return pixel.v < int(0.2 * 255);
-  return int(190 / 360. * 255) <= pixel.h && pixel.h <= int(215 / 360. * 255) &&
-         pixel.s > int(0.35 * 255) && pixel.v > int(0.40 * 255);
+  return (pixel.v < int(0.35 * 255)) ||
+         (int(190 / 360. * 255) <= pixel.h &&
+          pixel.h <= int(215 / 360. * 255) && pixel.s > int(0.35 * 255) &&
+          pixel.v > int(0.40 * 255));
+}
+
+bool isWood(const HSVPixel pixel) {
+  return int(37 / 360. * 255) <= pixel.h && pixel.h <= int(43 / 360. * 255) &&
+         int(30 / 100. * 255) <= pixel.s && pixel.s <= int(45 / 100. * 255) &&
+         int(58 / 100. * 255) <= pixel.v && pixel.v <= int(71 / 100. * 255);
 }
 
 bool isWhite(const HSVPixel pixel) {
-  return pixel.s < int(0.15 * 255) && pixel.v > int(0.75 * 255);
+  return pixel.s < int(0.15 * 255) && pixel.v > int(0.60 * 255);
 }
 
 bool isGreen(const HSVPixel pixel) {

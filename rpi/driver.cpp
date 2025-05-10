@@ -43,7 +43,7 @@ int run(const Mode &startMode, const Pose &startPose, bool openRound) {
     captureFrameBlocking();
     std::cout << "Captured a frame at: " << lastFrame.timestamp << std::endl;
 
-    saveFrame(lastFrame);
+    // saveFrame(lastFrame);
     lastFrame.timestamp += 1;
 
     std::cout << "Pre visual pose:\n";
@@ -58,7 +58,7 @@ int run(const Mode &startMode, const Pose &startPose, bool openRound) {
     auto poset = optimizePose(screenLines, pose, debug);
     drawProjectedLines(lastFrame, debug, {43, 255, 255});
 
-    saveFrame(lastFrame);
+    // saveFrame(lastFrame);
     if (!poset.has_value()) {
       std::cout << "AW HELL NAW" << std::endl;
       exit(-1);
