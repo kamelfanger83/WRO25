@@ -90,6 +90,30 @@ startMode(Frame &frame, const Pose &position) {
   }
 }
 
+std::optional<std::pair<std::queue<Waypoint>, Mode>>
+startMode2(Frame &frame, const Pose &position) {
+
+  auto trafficLight = checkTrafficLightInSegment(
+    frame, Segment::SEGMENT_1, position, TrafficLight::TRAFFICLIGHT_6);
+
+  if (!trafficLight.has_value()) {
+    waypoints.push(wayPointInSegment({70, 160, false}));
+    waypoints.push(wayPointInSegment({60, 170, false}));
+    waypoints.push(wayPointInSegment({80, 200, true}));
+    return {{waypoints, Mode{modeFromEndRight}}};
+  }
+} else if (trafficLight.value() == 'r') {
+    waypoints.push({48, 175, false});
+    waypoints.push({68, 170, false});
+    waypoints.push({80, 200, true});
+    return {{waypoints, Mode{modeFromEndRight}}};
+} else {
+    waypoints.push({30, 190, false});
+    waypoints.push({40, 210, false});
+    waypoints.push({50, 230, true});
+    return {{waypoints, Mode{modeFromEndLeft}}}
+}
+
 /// mode from the middle,
 std::optional<std::pair<std::queue<Waypoint>, Mode>>
 modeFromMiddle(Frame &frame, const Pose &position) {
